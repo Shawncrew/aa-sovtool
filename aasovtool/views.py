@@ -253,19 +253,24 @@ def index(request):
 @login_required
 @permission_required("aasovtool.manage_sovtool", raise_exception=True)
 def add_corp_token(request):
-    """Kick off the ESI OAuth flow for a corp-scoped token."""
-    # Redirect through django-esi's token request view so the user is sent
-    # to CCP SSO; on return we land at corp_token_callback below.
-    scopes = "+".join(app_settings.AASOVTOOL_ESI_SCOPES)
-    callback = request.build_absolute_uri(reverse("aasovtool:corp_token_callback"))
-    return HttpResponseRedirect(
-        f"/sso/login?scopes={scopes}&next={callback}"
-    )
+    """Entry point for adding a corp ESI token.
+
+    We simply forward to ``corp_token_callback``, which is decorated with
+    django-esi's ``@token_required``. That decorator drives the proper
+    add-character flow: it shows a chooser for any of the user's existing
+    AA-linked alts whose tokens already cover the required scopes, plus
+    a button to launch CCP SSO for a new character.
+
+    Importantly this avoids AA's ``/sso/login`` route, which enforces
+    main-character authentication and refuses alts — that was the
+    'Unable to authenticate as the selected character' error.
+    """
+    return HttpResponseRedirect(reverse("aasovtool:corp_token_callback"))
 
 
 @login_required
 @permission_required("aasovtool.manage_sovtool", raise_exception=True)
-@token_required(scopes=app_settings.AASOVTOOL_ESI_SCOPES)
+@token_required(scopes=app_settings.AASOVTOOL_ESI_SCOPES, new=True)
 def corp_token_callback(request, token):
     """Persist the returned ESI token against the character's corp."""
     from .esi_client import resolve_character_affiliations
