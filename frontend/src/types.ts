@@ -71,19 +71,23 @@ export interface SystemNode {
     vulnerableStart?: string | null;
     vulnerableEnd?: string | null;
     isRaidable?: boolean;
-    hub?: {
-      installedUpgrades?: Array<{
-        type_id?: number;
+  } | null;
+  live?: {
+    power?: { allocated?: number | null; available?: number | null } | null;
+    workforce?: { allocated?: number | null; available?: number | null } | null;
+    vulnerabilityWindow?: { start?: string | null; end?: string | null } | null;
+    reagentBay?: {
+      lastUpdated?: string | null;
+      reagents: Array<{
         typeId?: number;
-        online?: boolean;
-        isOnline?: boolean;
-        priority?: number;
+        amount: number;
+        burningPerHour: number;
       }>;
-      workforce?: { used?: number; capacity?: number } | null;
-      power?: { used?: number; capacity?: number } | null;
-      resourceYields?: Record<string, number> | null;
-      ansiblexLinks?: Array<{ system_id?: number; system_name?: string }> | null;
+      minHoursRemaining?: number | null;
     } | null;
+    fuelAccessListId?: number | null;
+    transportConfiguration?: "import" | "export" | "transit" | null;
+    transportState?: "import" | "export" | "transit" | null;
   } | null;
   corpStructures?: Array<{
     structureId: number;

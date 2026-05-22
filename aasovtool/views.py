@@ -36,7 +36,20 @@ def _json_request(request) -> dict:
         return {}
 
 
-def _serialize_system(system: models.System, override: models.SystemOverride | None) -> dict:
+def _serialize_system(
+    system: models.System,
+    override: models.SystemOverride | None,
+    hub_detail: dict | None = None,
+    upgrade_catalog: dict[int, models.Upgrade] | None = None,
+    system_name_by_id: dict[int, str] | None = None,
+) -> dict:
+    """Compose the per-system payload the planner consumes.
+
+    Layering order (later wins):
+      1. catalog defaults from System
+      2. live ESI hub-detail (if a hub is present and we have a token)
+      3. scenario override (user planning edits)
+    """
     base = {
         "systemName": system.system_name,
         "starID": system.star_id,
@@ -60,7 +73,14 @@ def _serialize_system(system: models.System, override: models.SystemOverride | N
         "transfers": [],
         "position": None,
         "ansiblexPartner": None,
+        "live": None,
     }
+
+    if hub_detail:
+        _apply_hub_detail_to_system(
+            base, hub_detail, upgrade_catalog or {}, system_name_by_id or {}
+        )
+
     if override:
         if override.role:
             base["role"] = override.role
@@ -73,6 +93,141 @@ def _serialize_system(system: models.System, override: models.SystemOverride | N
         if override.ansiblex_partner:
             base["ansiblexPartner"] = override.ansiblex_partner
     return base
+
+
+def _apply_hub_detail_to_system(
+    base: dict,
+    hub_detail: dict,
+    upgrade_catalog: dict[int, models.Upgrade],
+    system_name_by_id: dict[int, str],
+) -> None:
+    """Translate GetCorporationsStructuresSovereigntyHubsDetail into the
+    planner's per-system shape.
+
+    Schema reference (CCP, X-Compatibility-Date 2026-05-19):
+      - resources.power / resources.workforce: {allocated, available}
+      - upgrades: [{type_id, power_state: Unspecified|Online|Offline|Low|Pending}]
+      - vulnerability_window: {start, end} (optional — omitted while in campaign)
+      - reagent_bay: {last_updated, reagents:[{type_id, amount, burning_per_hour}]}
+      - workforce_transport.configuration: oneOf {import:{sources:[{solar_system_id}]},
+          export:{...}, transit:{...}} — the *planned* role
+      - workforce_transport.state: oneOf {import:{sources:[{amount, solar_system_id}]},
+          export:{...}, transit:{...}} — the *currently active* role with amounts
+      - fuel_access_list_id: id of the access list governing fuel mgmt
+    """
+    # ---- Role: prefer the live state, fall back to configuration. ----
+    transport = hub_detail.get("workforce_transport") or {}
+    role = _detect_transport_role(transport.get("state")) or _detect_transport_role(
+        transport.get("configuration")
+    )
+    if role:
+        base["role"] = role
+
+    # ---- Upgrades: join with the local catalog so we have names + costs. ----
+    upgrades_out: list[dict] = []
+    for entry in hub_detail.get("upgrades") or []:
+        type_id = entry.get("type_id")
+        if not type_id:
+            continue
+        cat = upgrade_catalog.get(int(type_id))
+        upgrades_out.append(
+            {
+                "typeId": int(type_id),
+                "upgradeName": cat.upgrade_name if cat else f"Type {type_id}",
+                "power": cat.power if cat else 0,
+                "workforce": cat.workforce if cat else 0,
+                "superionicIcePerHour": cat.superionic_ice_per_hour if cat else 0,
+                "magmaticGasPerHour": cat.magmatic_gas_per_hour if cat else 0,
+                "priority": 1,
+                "isOnline": (entry.get("power_state") or "Unspecified") == "Online",
+                "powerState": entry.get("power_state") or "Unspecified",
+            }
+        )
+    if upgrades_out:
+        base["upgrades"] = upgrades_out
+
+    # ---- Transfers: build edges from the *state* block (real amounts). ----
+    transfers_out: list[dict] = []
+    state = transport.get("state") or {}
+    if state.get("export"):
+        for dest in state["export"].get("destinations") or state["export"].get(
+            "sources"
+        ) or []:
+            target_id = dest.get("solar_system_id")
+            target_name = system_name_by_id.get(int(target_id)) if target_id else None
+            if not target_name:
+                continue
+            transfers_out.append(
+                {
+                    "sourceSystemId": base["systemName"],
+                    "targetSystemId": target_name,
+                    "amount": int(dest.get("amount") or 0),
+                    "viaSystems": [],
+                    "isOnline": True,
+                }
+            )
+    if transfers_out:
+        base["transfers"] = transfers_out
+
+    # ---- Live snapshot the card displays ----
+    resources = hub_detail.get("resources") or {}
+    power = resources.get("power") or {}
+    wf = resources.get("workforce") or {}
+    reagent_bay = hub_detail.get("reagent_bay") or {}
+    reagents_out: list[dict] = []
+    min_hours: float | None = None
+    for r in reagent_bay.get("reagents") or []:
+        type_id = r.get("type_id")
+        amount = int(r.get("amount") or 0)
+        burn = int(r.get("burning_per_hour") or 0)
+        reagents_out.append(
+            {
+                "typeId": type_id,
+                "amount": amount,
+                "burningPerHour": burn,
+            }
+        )
+        if burn > 0:
+            hours = amount / burn
+            min_hours = hours if min_hours is None else min(min_hours, hours)
+
+    vuln = hub_detail.get("vulnerability_window") or {}
+    base["live"] = {
+        "power": {
+            "allocated": power.get("allocated"),
+            "available": power.get("available"),
+        },
+        "workforce": {
+            "allocated": wf.get("allocated"),
+            "available": wf.get("available"),
+        },
+        "vulnerabilityWindow": {
+            "start": vuln.get("start"),
+            "end": vuln.get("end"),
+        } if vuln else None,
+        "reagentBay": {
+            "lastUpdated": reagent_bay.get("last_updated"),
+            "reagents": reagents_out,
+            "minHoursRemaining": min_hours,
+        } if reagent_bay else None,
+        "fuelAccessListId": hub_detail.get("fuel_access_list_id"),
+        "transportConfiguration": _detect_transport_role(
+            transport.get("configuration")
+        ),
+        "transportState": _detect_transport_role(transport.get("state")),
+    }
+
+
+def _detect_transport_role(node: dict | None) -> str | None:
+    """Read the oneOf discriminator. The schema embeds import/export/transit
+    as keys; whichever is present is the active role.
+    """
+    if not isinstance(node, dict):
+        return None
+    for candidate in ("import", "export", "transit"):
+        if candidate in node:
+            return candidate
+    return None
 
 
 def _serialize_upgrade(upgrade: models.Upgrade) -> dict:
@@ -130,11 +285,25 @@ def _build_scenario_systems(scenario: models.Scenario) -> list[dict]:
     corp_by_system_id: dict[int, list[models.CorpStructure]] = {}
     for cs in models.CorpStructure.objects.all():
         corp_by_system_id.setdefault(cs.system_id, []).append(cs)
+    # Look-up tables passed to _serialize_system so hub_detail can be
+    # translated without N+1 queries.
+    upgrade_catalog = {u.type_id: u for u in models.Upgrade.objects.all()}
+    system_name_by_id: dict[int, str] = {}
+    for sys_row in models.System.objects.exclude(star_id=None).only(
+        "star_id", "system_name"
+    ):
+        system_name_by_id[int(sys_row.star_id)] = sys_row.system_name
     for system in qs:
-        row = _serialize_system(system, overrides.get(system.system_name))
         sov = sov_by_id.get(system.star_id) if system.star_id else None
+        hub_detail = (sov.hub_detail or None) if sov else None
+        row = _serialize_system(
+            system,
+            overrides.get(system.system_name),
+            hub_detail=hub_detail,
+            upgrade_catalog=upgrade_catalog,
+            system_name_by_id=system_name_by_id,
+        )
         if sov:
-            hub_detail = sov.hub_detail or {}
             row["sovereignty"] = {
                 "allianceId": sov.alliance_id,
                 "corporationId": sov.corporation_id,
@@ -148,18 +317,6 @@ def _build_scenario_systems(scenario: models.Scenario) -> list[dict]:
                 if sov.vulnerable_end_time
                 else None,
                 "isRaidable": sov.is_raidable,
-                # Live hub data from GetCorporationsStructuresSovereigntyHubsDetail.
-                # Empty when no CorpToken with read_structures is registered.
-                "hub": {
-                    "installedUpgrades": hub_detail.get("installed_upgrades")
-                    or hub_detail.get("upgrades", []),
-                    "workforce": hub_detail.get("workforce"),
-                    "power": hub_detail.get("power"),
-                    "resourceYields": hub_detail.get("resource_yields")
-                    or hub_detail.get("yields"),
-                    "ansiblexLinks": hub_detail.get("ansiblex_links")
-                    or hub_detail.get("ansiblex_partners"),
-                } if hub_detail else None,
             }
         corp_structs = corp_by_system_id.get(system.star_id, []) if system.star_id else []
         row["corpStructures"] = [
