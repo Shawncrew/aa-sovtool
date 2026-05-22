@@ -38,6 +38,31 @@ def _get(path: str, *, token=None, params: dict | None = None) -> Any:
     return response.json()
 
 
+def _get_paged(path: str, *, token=None, params: dict | None = None) -> list:
+    """Walk every ESI page (using the ``X-Pages`` response header) and
+    return the concatenated list. ESI uses 1-indexed ``page`` query param.
+    """
+    url = f"{ESI_BASE}{path}"
+    base_params = dict(params or {})
+    base_params["page"] = 1
+    first = requests.get(url, headers=_headers(token), params=base_params, timeout=30)
+    first.raise_for_status()
+    payload = first.json()
+    if not isinstance(payload, list):
+        return payload
+    total_pages = int(first.headers.get("X-Pages", "1") or "1")
+    out: list = list(payload)
+    for page in range(2, total_pages + 1):
+        page_params = dict(params or {})
+        page_params["page"] = page
+        resp = requests.get(
+            url, headers=_headers(token), params=page_params, timeout=30
+        )
+        resp.raise_for_status()
+        out.extend(resp.json() or [])
+    return out
+
+
 # --- Public endpoints -----------------------------------------------------
 
 
@@ -85,8 +110,12 @@ def fetch_raidable_skyhooks() -> list[dict]:
 
 
 def fetch_corp_structures(token, corporation_id: int) -> list[dict]:
-    """GET /corporations/{corp_id}/structures/ — corp-owned structures."""
-    return _get(
+    """GET /corporations/{corp_id}/structures/ — corp-owned structures.
+
+    Paginated: walks every page exposed by the ``X-Pages`` header so we
+    don't silently truncate at the first 250 results.
+    """
+    return _get_paged(
         f"/corporations/{corporation_id}/structures/",
         token=token,
     )

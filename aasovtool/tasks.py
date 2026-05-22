@@ -227,10 +227,21 @@ def refresh_corp_sov_hubs() -> int:
     for record in models.CorpToken.objects.filter(is_enabled=True):
         if not record.esi_token:
             continue
-        # Limit the query to sov hubs the corp actually owns.
-        hubs = models.SovStructure.objects.filter(
-            corporation_id=record.corporation_id
+        # /sovereignty/structures/ only exposes alliance_id, so we can't
+        # filter SovStructure by corporation_id. Instead use the corp's
+        # own structure listing (already cached in CorpStructure) as the
+        # bridge — every sov-relevant structure_id the corp owns will be
+        # in there once /corporations/{id}/structures/ has been paged
+        # through, and we look those up in the public sov table to know
+        # which are actually hubs.
+        owned_ids = list(
+            models.CorpStructure.objects.filter(
+                corporation_id=record.corporation_id
+            ).values_list("structure_id", flat=True)
         )
+        if not owned_ids:
+            continue
+        hubs = models.SovStructure.objects.filter(structure_id__in=owned_ids)
         for hub in hubs:
             try:
                 detail = esi_client.fetch_corp_sov_hub_detail(
