@@ -233,21 +233,42 @@ HUB_LIST_CANDIDATES: tuple[str, ...] = (
 )
 
 
+def _unwrap_hub_list(payload) -> list[dict]:
+    """Normalize the sov-hub listing response.
+
+    CCP returns ``{"sovereignty_hubs": [{"id": ..., "solar_system_id": ...}]}``
+    on the Equinox endpoint; older candidate paths returned a bare list.
+    We accept either shape and emit a uniform list of dicts.
+    """
+    if isinstance(payload, list):
+        return payload
+    if isinstance(payload, dict):
+        for key in ("sovereignty_hubs", "structures", "items", "data"):
+            inner = payload.get(key)
+            if isinstance(inner, list):
+                return inner
+    return []
+
+
 def fetch_corp_sov_hubs_list(token, corporation_id: int) -> list[dict]:
     """Equinox: list of sov hubs owned by ``corporation_id``.
 
-    /corporations/{id}/structures/ only returns upwell structures
-    (citadels, ECs, refineries); sov hubs introduced by Equinox live
-    behind a separate endpoint. We probe candidate path+base combinations
-    once and cache the first one that returns 200.
+    Confirmed endpoint:
+      GET https://esi.evetech.net/corporations/{id}/structures/sovereignty-hubs
+      headers: X-Compatibility-Date: 2026-05-19
+      scope:   esi-structures.read_corporation.v1
+    Response shape:
+      {"sovereignty_hubs": [{"id": <structure_id>, "solar_system_id": <sys_id>}, ...]}
     """
     global _HUB_LIST_PATH_TEMPLATE, _HUB_LIST_BASE
     if _HUB_LIST_PATH_TEMPLATE:
         try:
-            return _get_paged(
-                _HUB_LIST_PATH_TEMPLATE.format(corp=corporation_id),
-                token=token,
-                base=_HUB_LIST_BASE,
+            return _unwrap_hub_list(
+                _get(
+                    _HUB_LIST_PATH_TEMPLATE.format(corp=corporation_id),
+                    token=token,
+                    base=_HUB_LIST_BASE,
+                )
             )
         except requests.HTTPError as err:
             if err.response.status_code == 404:
@@ -257,7 +278,7 @@ def fetch_corp_sov_hubs_list(token, corporation_id: int) -> list[dict]:
     for base in bases:
         for template in HUB_LIST_CANDIDATES:
             try:
-                payload = _get_paged(
+                payload = _get(
                     template.format(corp=corporation_id), token=token, base=base
                 )
             except requests.HTTPError as err:
@@ -266,7 +287,7 @@ def fetch_corp_sov_hubs_list(token, corporation_id: int) -> list[dict]:
                 raise
             _HUB_LIST_PATH_TEMPLATE = template
             _HUB_LIST_BASE = base
-            return payload
+            return _unwrap_hub_list(payload)
     return []
 
 

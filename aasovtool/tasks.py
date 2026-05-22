@@ -299,7 +299,9 @@ def refresh_corp_sov_hubs() -> int:
         except Exception:
             hub_list = []
         for entry in hub_list:
-            sid = entry.get("structure_id")
+            # CCP's sov-hub LIST uses 'id'; older candidate paths used
+            # 'structure_id'. Accept either.
+            sid = entry.get("id") or entry.get("structure_id")
             if sid:
                 owned_ids.append(int(sid))
         if not owned_ids:
