@@ -232,6 +232,56 @@ def _apply_hub_detail_to_system(
     }
 
 
+def _bfs_path(
+    source: str, target: str, neighbors_by_name: dict[str, list[str]], max_hops: int = 16
+) -> list[str]:
+    """Return the list of intermediate system names connecting source to
+    target along stargate neighbours, exclusive of both endpoints.
+
+    Returns [] if source == target or if no path is found within
+    ``max_hops`` jumps. Used to populate ``viaSystems`` on ESI-derived
+    transfers so the TransferEdge component can lay each segment along
+    a real stargate connection.
+    """
+    if source == target or source not in neighbors_by_name:
+        return []
+    visited = {source}
+    queue: list[tuple[str, list[str]]] = [(source, [])]
+    while queue:
+        node, path = queue.pop(0)
+        if len(path) > max_hops:
+            continue
+        for neighbor in neighbors_by_name.get(node, []):
+            if neighbor in visited:
+                continue
+            visited.add(neighbor)
+            if neighbor == target:
+                return path
+            queue.append((neighbor, path + [neighbor]))
+    return []
+
+
+def _populate_via_systems(
+    rows: list[dict], neighbors_by_name: dict[str, list[str]]
+) -> None:
+    """For every transfer that lacks an explicit viaSystems list, run
+    BFS over the stargate graph and fill it in. This makes the
+    transfer-edge renderer draw each leg between real neighbours
+    instead of cutting a diagonal across the map.
+    """
+    for row in rows:
+        for transfer in row.get("transfers", []):
+            if transfer.get("viaSystems"):
+                continue
+            via = _bfs_path(
+                transfer["sourceSystemId"],
+                transfer["targetSystemId"],
+                neighbors_by_name,
+            )
+            if via:
+                transfer["viaSystems"] = via
+
+
 def _detect_transport_role(node: dict | None) -> str | None:
     """Read the oneOf discriminator. The schema embeds import/export/transit
     as keys; whichever is present (and truthy) is the active role.
@@ -314,12 +364,12 @@ def _build_scenario_systems(scenario: models.Scenario) -> list[dict]:
         "solar_system_id", "system_name"
     ):
         system_name_by_id[int(sys_row.solar_system_id)] = sys_row.system_name
+    # Neighbour graph for BFS path-finding on ESI-derived transfers.
+    neighbors_by_name: dict[str, list[str]] = {
+        s.system_name: list(s.neighbors or []) for s in qs
+    }
+
     for system in qs:
-        # Join the catalog System to the ESI SovStructure by
-        # solar_system_id (EVE's 30M-range key). The legacy ``star_id``
-        # column held the celestial item ID (40M range) and never
-        # matches; we keep it on the row for back-compat but use
-        # solar_system_id for the merge.
         join_key = system.solar_system_id or system.star_id
         sov = sov_by_id.get(join_key) if join_key else None
         hub_detail = (sov.hub_detail or None) if sov else None
@@ -356,6 +406,7 @@ def _build_scenario_systems(scenario: models.Scenario) -> list[dict]:
             for cs in corp_structs
         ]
         out.append(row)
+    _populate_via_systems(out, neighbors_by_name)
     return out
 
 

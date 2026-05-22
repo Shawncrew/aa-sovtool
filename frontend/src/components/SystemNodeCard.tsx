@@ -285,48 +285,6 @@ function SystemNodeCardInner({ data }: NodeProps<SystemNodeData>) {
           </div>
         </div>
       )}
-      {system.live && (
-        <div className="mt-1 flex flex-col gap-0.5 text-[10px] text-slate-400">
-          <div className="flex items-center justify-between gap-2">
-            {system.live.workforce && typeof system.live.workforce.allocated === "number" && (
-              <span title="Live workforce: allocated / available">
-                WF {system.live.workforce.allocated.toLocaleString()}
-                {typeof system.live.workforce.available === "number"
-                  ? ` / ${system.live.workforce.available.toLocaleString()}`
-                  : ""}
-              </span>
-            )}
-            {system.live.power && typeof system.live.power.allocated === "number" && (
-              <span title="Live power: allocated / available">
-                PW {system.live.power.allocated.toLocaleString()}
-                {typeof system.live.power.available === "number"
-                  ? ` / ${system.live.power.available.toLocaleString()}`
-                  : ""}
-              </span>
-            )}
-            {system.live.reagentBay
-              && typeof system.live.reagentBay.minHoursRemaining === "number" && (
-              <span
-                title="Hours of fuel remaining at current burn rate"
-                className={
-                  system.live.reagentBay.minHoursRemaining < 48
-                    ? "text-rose-300"
-                    : ""
-                }
-              >
-                Fuel {Math.floor(system.live.reagentBay.minHoursRemaining)}h
-              </span>
-            )}
-          </div>
-          {system.live.vulnerabilityWindow?.start && system.live.vulnerabilityWindow?.end && (
-            <div title="Vulnerability window (UTC)">
-              Vuln {new Date(system.live.vulnerabilityWindow.start).toUTCString().slice(17, 22)}
-              {" → "}
-              {new Date(system.live.vulnerabilityWindow.end).toUTCString().slice(17, 22)}
-            </div>
-          )}
-        </div>
-      )}
       <div className="mt-3 space-y-2 text-[14px] text-slate-200">
         <div>
           <div className="flex justify-between text-[14px] uppercase tracking-wide text-slate-300 font-semibold">
