@@ -79,3 +79,23 @@ class Command(BaseCommand):
                 f"  SovStructure rows whose structure_id matches this corp's listing: "
                 f"{models.SovStructure.objects.filter(structure_id__in=[i.get('structure_id') for i in all_items]).count()}"
             )
+
+            # Try the Equinox sov-hub listing endpoint.
+            self.stdout.write("")
+            self.stdout.write(self.style.MIGRATE_LABEL(
+                "  Sov-hub listing endpoint (Equinox):"
+            ))
+            try:
+                hubs = esi_client.fetch_corp_sov_hubs_list(
+                    record.esi_token, record.corporation_id
+                )
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f"    Request failed: {e}"))
+                continue
+            self.stdout.write(
+                f"    Discovered path: {esi_client._HUB_LIST_PATH_TEMPLATE or '(none — all candidates 404)'}"
+            )
+            self.stdout.write(f"    Sov hubs returned: {len(hubs)}")
+            if hubs:
+                sample = hubs[0]
+                self.stdout.write(f"    Sample entry keys: {sorted(sample.keys())}")

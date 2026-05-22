@@ -179,6 +179,46 @@ def fetch_corp_structures(token, corporation_id: int) -> list[dict]:
 # Cache the path template that actually works once we discover it, so we
 # don't keep blasting all candidates and burning the ESI error budget.
 _HUB_DETAIL_PATH_TEMPLATE: str | None = None
+_HUB_LIST_PATH_TEMPLATE: str | None = None
+
+
+def fetch_corp_sov_hubs_list(token, corporation_id: int) -> list[dict]:
+    """Equinox: list of sov hubs owned by ``corporation_id``.
+
+    /corporations/{id}/structures/ only returns upwell structures
+    (citadels, ECs, refineries); sov hubs introduced by Equinox live
+    behind a separate endpoint. We probe a few likely paths once and
+    cache the working one.
+
+    Returns a list of dicts with at minimum ``structure_id`` and
+    ``solar_system_id``; the exact schema is whatever ESI returns.
+    Empty list if no listing endpoint is found.
+    """
+    global _HUB_LIST_PATH_TEMPLATE
+    templates = (
+        "/corporations/{corp}/structures/sovereignty_hubs/",
+        "/corporations/{corp}/sovereignty_hubs/",
+        "/corporations/{corp}/sovereignty/hubs/",
+    )
+    if _HUB_LIST_PATH_TEMPLATE:
+        try:
+            return _get_paged(
+                _HUB_LIST_PATH_TEMPLATE.format(corp=corporation_id), token=token
+            )
+        except requests.HTTPError as err:
+            if err.response.status_code == 404:
+                return []
+            raise
+    for template in templates:
+        try:
+            payload = _get_paged(template.format(corp=corporation_id), token=token)
+        except requests.HTTPError as err:
+            if err.response.status_code in (404, 400):
+                continue
+            raise
+        _HUB_LIST_PATH_TEMPLATE = template
+        return payload
+    return []
 
 
 def fetch_corp_sov_hub_detail(token, corporation_id: int, structure_id: int) -> dict:

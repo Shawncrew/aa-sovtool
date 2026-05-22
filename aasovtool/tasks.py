@@ -280,24 +280,39 @@ def refresh_corp_sov_hubs() -> int:
     # stale hub_detail on rows that are no longer corp-owned.
     refreshed_ids: set[int] = set()
     corp_ids_seen: set[int] = set()
+    corp_owned_hub_ids: set[int] = set()
     for record in models.CorpToken.objects.filter(is_enabled=True):
         if not record.esi_token:
             continue
         corp_ids_seen.add(record.corporation_id)
-        # /sovereignty/structures/ only exposes alliance_id, so we can't
-        # filter SovStructure by corporation_id. Instead use the corp's
-        # own structure listing (already cached in CorpStructure) as the
-        # bridge — every sov-relevant structure_id the corp owns will be
-        # in there once /corporations/{id}/structures/ has been paged
-        # through, and we look those up in the public sov table to know
-        # which are actually hubs.
-        owned_ids = list(
-            models.CorpStructure.objects.filter(
-                corporation_id=record.corporation_id
-            ).values_list("structure_id", flat=True)
-        )
+        # Source of truth for "which sov hubs does this corp own" is the
+        # Equinox listing endpoint:
+        # /corporations/{id}/structures/sovereignty_hubs/
+        # (we probe candidates once via fetch_corp_sov_hubs_list).
+        # /corporations/{id}/structures/ doesn't return sov hubs — only
+        # upwell structures (citadels, ECs, refineries).
+        owned_ids: list[int] = []
+        try:
+            hub_list = esi_client.fetch_corp_sov_hubs_list(
+                record.esi_token, record.corporation_id
+            )
+        except Exception:
+            hub_list = []
+        for entry in hub_list:
+            sid = entry.get("structure_id")
+            if sid:
+                owned_ids.append(int(sid))
+        if not owned_ids:
+            # Fallback: try CorpStructure rows in case CCP eventually
+            # surfaces sov hubs via the unified endpoint.
+            owned_ids = list(
+                models.CorpStructure.objects.filter(
+                    corporation_id=record.corporation_id
+                ).values_list("structure_id", flat=True)
+            )
         if not owned_ids:
             continue
+        corp_owned_hub_ids.update(owned_ids)
         hubs = models.SovStructure.objects.filter(structure_id__in=owned_ids)
         for hub in hubs:
             try:
@@ -334,13 +349,8 @@ def refresh_corp_sov_hubs() -> int:
     # token actually succeeded this run, so a transient ESI failure
     # doesn't wipe live data.
     if corp_ids_seen:
-        owned_now = set(
-            models.CorpStructure.objects.filter(
-                corporation_id__in=corp_ids_seen
-            ).values_list("structure_id", flat=True)
-        )
         cleared = (
-            models.SovStructure.objects.exclude(structure_id__in=owned_now)
+            models.SovStructure.objects.exclude(structure_id__in=corp_owned_hub_ids)
             .exclude(hub_detail={})
             .update(hub_detail={})
         )
