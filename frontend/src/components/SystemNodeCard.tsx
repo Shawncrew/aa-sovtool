@@ -183,10 +183,32 @@ function SystemNodeCardInner({ data }: NodeProps<SystemNodeData>) {
   const selectedAppearance = isSelected
     ? "border-sov-orange bg-slate-800 ring-2 ring-sov-orange/50"
     : baseAppearance;
-  const powerUsed = stats?.powerUsed ?? 0;
-  const powerCapacity = stats?.powerCapacity ?? system.totalPower;
-  const workforceUsed = stats?.workforceUsed ?? 0;
-  const workforceCapacity = stats?.workforceCapacity ?? system.workforce;
+  // ESI is authoritative when its live values are available: prefer
+  // resources.power.allocated/available and resources.workforce.* from
+  // the corp sov-hub detail endpoint over the catalog/scenario values.
+  // Falls back to the previous behaviour for systems we don't have a
+  // hub_detail for.
+  const livePowerAllocated = system.live?.power?.allocated;
+  const livePowerAvailable = system.live?.power?.available;
+  const liveWorkforceAllocated = system.live?.workforce?.allocated;
+  const liveWorkforceAvailable = system.live?.workforce?.available;
+
+  const powerUsed =
+    typeof livePowerAllocated === "number"
+      ? livePowerAllocated
+      : stats?.powerUsed ?? 0;
+  const powerCapacity =
+    typeof livePowerAvailable === "number"
+      ? livePowerAvailable
+      : stats?.powerCapacity ?? system.totalPower;
+  const workforceUsed =
+    typeof liveWorkforceAllocated === "number"
+      ? liveWorkforceAllocated
+      : stats?.workforceUsed ?? 0;
+  const workforceCapacity =
+    typeof liveWorkforceAvailable === "number"
+      ? liveWorkforceAvailable
+      : stats?.workforceCapacity ?? system.workforce;
   const upgradeWorkforceUsed = stats?.upgradeWorkforceUsed ?? 0;
   const exportWorkforceUsed = stats?.exportWorkforceUsed ?? 0;
   const upgradeWorkforcePercent =
