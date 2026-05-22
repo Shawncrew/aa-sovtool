@@ -111,6 +111,20 @@ def _get(path: str, *, token=None, params: dict | None = None, base: str | None 
     response = requests.get(
         url, headers=_headers(token), params=params or {}, timeout=30
     )
+    # CCP returns 429 (Too Many Requests) for per-route rate-group
+    # exhaustion, distinct from the per-IP error-rate 420. Honor the
+    # Retry-After header and retry once instead of bubbling the error
+    # up and skipping the row.
+    if response.status_code == 429:
+        retry_after = response.headers.get("Retry-After")
+        try:
+            sleep_for = float(retry_after) if retry_after else 60.0
+        except ValueError:
+            sleep_for = 60.0
+        time.sleep(min(sleep_for, 60))
+        response = requests.get(
+            url, headers=_headers(token), params=params or {}, timeout=30
+        )
     _record_rate_limit(response)
     response.raise_for_status()
     return response.json()
