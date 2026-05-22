@@ -40,6 +40,25 @@ def refresh_sovereignty_structures() -> int:  # noqa: C901
     except Exception:
         sov_systems = []
 
+    # Filter to systems in the planner's configured regions — there's no
+    # reason to cache faction-claimed high-sec entries. We resolve via
+    # the bundled System catalog which is small (~8k rows in-memory).
+    from . import app_settings as _settings
+    allowed_regions = {r.lower() for r in _settings.AASOVTOOL_ALLOWED_REGIONS}
+    if allowed_regions and sov_systems:
+        allowed_star_ids = set(
+            models.System.objects.filter(
+                region_name__iregex=r"^(%s)$" % "|".join(allowed_regions)
+            ).values_list("star_id", flat=True)
+        )
+        allowed_star_ids.discard(None)
+        if allowed_star_ids:
+            sov_systems = [
+                row for row in sov_systems
+                if int(row.get("solar_system_id") or row.get("system_id") or 0)
+                in allowed_star_ids
+            ]
+
     raidable: dict[int, dict] = {}
     try:
         for row in esi_client.fetch_raidable_skyhooks():
@@ -257,10 +276,17 @@ def refresh_access_lists() -> int:
     if not token:
         return 0
 
+    # Scope to structures the registered tokens actually have access to:
+    # the corp's own upwell structures + the corp's own sov hubs.
+    # Public sov rows (synthetic structure_id < 0) don't grant ACL
+    # visibility — iterating them would burn thousands of fruitless
+    # ESI calls.
     structure_ids: Iterable[int] = list(
         models.CorpStructure.objects.values_list("structure_id", flat=True)
     ) + list(
-        models.SovStructure.objects.values_list("structure_id", flat=True)
+        models.SovStructure.objects.filter(structure_id__gt=0).values_list(
+            "structure_id", flat=True
+        )
     )
     structure_ids = list({int(s) for s in structure_ids})
 
