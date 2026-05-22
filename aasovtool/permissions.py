@@ -71,11 +71,11 @@ def ensure_default_groups() -> None:
             "admin": "Sovtool Admins",
         }[role]
         group, _ = Group.objects.get_or_create(name=group_name)
-        group.permissions.clear()
-        for codename in codenames:
-            try:
-                group.permissions.add(
-                    Permission.objects.get(content_type=ct, codename=codename)
-                )
-            except Permission.DoesNotExist:
-                continue
+        # NOTE: do not use .clear() here — Alliance Auth's
+        # m2m_changed_group_permissions signal handler crashes on pre_clear
+        # (pk_set is None). Compute the target set and use .set() which
+        # emits add/remove with explicit pks instead.
+        desired = list(
+            Permission.objects.filter(content_type=ct, codename__in=codenames)
+        )
+        group.permissions.set(desired)
