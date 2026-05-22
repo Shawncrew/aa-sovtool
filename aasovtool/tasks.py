@@ -22,7 +22,7 @@ def _parse_dt(value):
 
 
 @shared_task(name="aasovtool.refresh_sovereignty_structures")
-def refresh_sovereignty_structures() -> int:
+def refresh_sovereignty_structures() -> int:  # noqa: C901 - readability trumps splitting
     """Refresh the public /sovereignty/structures/ + /sovereignty/systems/ data."""
     structures = esi_client.fetch_sovereignty_structures()
     sov_systems = []
@@ -52,7 +52,7 @@ def refresh_sovereignty_structures() -> int:
         name_ids.add(s.get("solar_system_id"))
     name_map = esi_client.resolve_names(name_ids)
 
-    seen_ids = []
+    seen_ids: list[int] = []
     for entry in structures:
         sid = entry.get("structure_id")
         if not sid:
@@ -89,12 +89,26 @@ def refresh_sovereignty_structures() -> int:
                 "last_seen_at": timezone.now(),
             },
         )
+    # ESI is authoritative: drop any cached sov structures that are no
+    # longer reported by /sovereignty/structures/ (demolished, unanchored,
+    # etc). We only do this when ESI actually returned a non-empty list to
+    # avoid wiping the cache if the call failed silently.
+    if seen_ids:
+        deleted, _ = models.SovStructure.objects.exclude(
+            structure_id__in=seen_ids
+        ).delete()
+        if deleted:
+            print(f"[sovtool] Pruned {deleted} stale SovStructure rows.")
     return len(seen_ids)
 
 
 @shared_task(name="aasovtool.refresh_corp_structures")
 def refresh_corp_structures() -> int:
-    """Refresh /corporations/{corp_id}/structures/ for every enabled CorpToken."""
+    """Refresh /corporations/{corp_id}/structures/ for every enabled CorpToken.
+
+    ESI is authoritative for this corp's structures: any cached row that
+    is no longer returned is pruned at the end of the per-corp pass.
+    """
     total = 0
     for record in models.CorpToken.objects.filter(is_enabled=True):
         if not record.esi_token:
@@ -110,10 +124,12 @@ def refresh_corp_structures() -> int:
         system_ids = {s.get("system_id") for s in structures if s.get("system_id")}
         name_map = esi_client.resolve_names(type_ids | system_ids)
 
+        seen_ids: list[int] = []
         for entry in structures:
             sid = entry.get("structure_id")
             if not sid:
                 continue
+            seen_ids.append(int(sid))
             models.CorpStructure.objects.update_or_create(
                 structure_id=sid,
                 defaults={
@@ -134,6 +150,23 @@ def refresh_corp_structures() -> int:
             )
             total += 1
 
+        # Authoritative: prune cached corp structures this corp no longer
+        # owns. Scoped to this corp so we never touch another corp's rows
+        # if its token failed in this pass.
+        if seen_ids:
+            deleted, _ = (
+                models.CorpStructure.objects.filter(
+                    corporation_id=record.corporation_id
+                )
+                .exclude(structure_id__in=seen_ids)
+                .delete()
+            )
+            if deleted:
+                print(
+                    f"[sovtool] Pruned {deleted} stale CorpStructure rows "
+                    f"for {record.corporation_name}."
+                )
+
         record.last_used_at = timezone.now()
         record.save(update_fields=["last_used_at"])
 
@@ -142,7 +175,12 @@ def refresh_corp_structures() -> int:
 
 @shared_task(name="aasovtool.refresh_access_lists")
 def refresh_access_lists() -> int:
-    """Fetch access lists for every cached CorpStructure / SovStructure."""
+    """Fetch access lists for every cached CorpStructure / SovStructure.
+
+    ESI is authoritative: per-structure access-list rows that ESI no
+    longer returns are pruned, and members of each list that disappear
+    are also pruned.
+    """
     total = 0
     tokens = list(models.CorpToken.objects.filter(is_enabled=True))
     if not tokens:
@@ -164,10 +202,12 @@ def refresh_access_lists() -> int:
             lists = esi_client.fetch_structure_access_lists(token, structure_id)
         except Exception:
             continue
+        seen_list_ids: list[int] = []
         for al in lists:
             access_list_id = al.get("access_list_id") or al.get("id")
             if not access_list_id:
                 continue
+            seen_list_ids.append(int(access_list_id))
             record, _ = models.AccessList.objects.update_or_create(
                 access_list_id=access_list_id,
                 defaults={
@@ -182,7 +222,7 @@ def refresh_access_lists() -> int:
                 members = esi_client.fetch_access_list_members(token, access_list_id)
             except Exception:
                 members = al.get("members") or []
-            member_ids = []
+            seen_member_keys: set[tuple[int, str]] = set()
             for member in members:
                 mid = member.get("entity_id") or member.get("id")
                 if not mid:
@@ -197,19 +237,31 @@ def refresh_access_lists() -> int:
                         "is_blocked": bool(member.get("blocked")),
                     },
                 )
-                member_ids.append((mid, entity_type))
-            # Drop members that no longer appear in the list
-            if member_ids:
-                keep_filter = models.AccessListMember.objects.filter(access_list=record)
-                kept_pks = set()
-                for mid, et in member_ids:
-                    kept_pks.update(
-                        keep_filter.filter(entity_id=mid, entity_type=et).values_list(
-                            "pk", flat=True
-                        )
-                    )
-                keep_filter.exclude(pk__in=kept_pks).delete()
+                seen_member_keys.add((int(mid), entity_type))
+            # Drop members that no longer appear in the list. We rebuild
+            # the keep-set from the source-of-truth keys we just inserted
+            # so any orphaned rows (from a previous schema) are removed.
+            keep_pks: list[int] = []
+            for mid, et in seen_member_keys:
+                keep_pks.extend(
+                    models.AccessListMember.objects.filter(
+                        access_list=record, entity_id=mid, entity_type=et
+                    ).values_list("pk", flat=True)
+                )
+            models.AccessListMember.objects.filter(access_list=record).exclude(
+                pk__in=keep_pks
+            ).delete()
             total += 1
+
+        # Authoritative: prune access lists that ESI no longer reports
+        # for this structure.
+        if seen_list_ids:
+            stale = models.AccessList.objects.filter(structure_id=structure_id).exclude(
+                access_list_id__in=seen_list_ids
+            )
+            if stale.exists():
+                stale.delete()
+
     return total
 
 
@@ -224,9 +276,14 @@ def refresh_corp_sov_hubs() -> int:
     fields the planner cards display about a sov hub.
     """
     updated = 0
+    # Track which hubs we successfully populated this run so we can clear
+    # stale hub_detail on rows that are no longer corp-owned.
+    refreshed_ids: set[int] = set()
+    corp_ids_seen: set[int] = set()
     for record in models.CorpToken.objects.filter(is_enabled=True):
         if not record.esi_token:
             continue
+        corp_ids_seen.add(record.corporation_id)
         # /sovereignty/structures/ only exposes alliance_id, so we can't
         # filter SovStructure by corporation_id. Instead use the corp's
         # own structure listing (already cached in CorpStructure) as the
@@ -251,6 +308,7 @@ def refresh_corp_sov_hubs() -> int:
                 continue
             if not detail:
                 continue
+            refreshed_ids.add(hub.structure_id)
             hub.hub_detail = detail
             # If the detail surfaces an ADM, prefer that over the public
             # /sovereignty/systems/ aggregate.
@@ -270,6 +328,24 @@ def refresh_corp_sov_hubs() -> int:
                 ]
             )
             updated += 1
+    # Authoritative: any cached SovStructure that previously had
+    # hub_detail but is no longer corp-owned (by any registered token)
+    # gets its hub_detail cleared. We only do this when at least one
+    # token actually succeeded this run, so a transient ESI failure
+    # doesn't wipe live data.
+    if corp_ids_seen:
+        owned_now = set(
+            models.CorpStructure.objects.filter(
+                corporation_id__in=corp_ids_seen
+            ).values_list("structure_id", flat=True)
+        )
+        cleared = (
+            models.SovStructure.objects.exclude(structure_id__in=owned_now)
+            .exclude(hub_detail={})
+            .update(hub_detail={})
+        )
+        if cleared:
+            print(f"[sovtool] Cleared stale hub_detail on {cleared} rows.")
     return updated
 
 
