@@ -20,6 +20,13 @@ import time
 import requests
 
 ESI_BASE = "https://esi.evetech.net/latest"
+# Additional bases tried (in order) when an Equinox endpoint isn't found
+# at /latest/ — CCP's new endpoints occasionally land under /dev/ first.
+ESI_FALLBACK_BASES = (
+    "https://esi.evetech.net/dev",
+    "https://esi.evetech.net/v1",
+    "https://esi.evetech.net/v2",
+)
 USER_AGENT = "aa-sovtool/0.1 (+https://github.com/)"
 
 # Rate-limit awareness. ESI advertises a per-IP error budget via the
@@ -68,9 +75,9 @@ def _headers(token=None) -> dict[str, str]:
     return headers
 
 
-def _get(path: str, *, token=None, params: dict | None = None) -> Any:
+def _get(path: str, *, token=None, params: dict | None = None, base: str | None = None) -> Any:
     _maybe_wait_for_budget()
-    url = f"{ESI_BASE}{path}"
+    url = f"{base or ESI_BASE}{path}"
     response = requests.get(
         url, headers=_headers(token), params=params or {}, timeout=30
     )
@@ -79,14 +86,18 @@ def _get(path: str, *, token=None, params: dict | None = None) -> Any:
     return response.json()
 
 
-def _get_paged(path: str, *, token=None, params: dict | None = None) -> list:
+def _get_paged(
+    path: str, *, token=None, params: dict | None = None, base: str | None = None
+) -> list:
     """Walk every ESI page (using the ``X-Pages`` response header) and
     return the concatenated list. ESI uses 1-indexed ``page`` query param.
     """
-    url = f"{ESI_BASE}{path}"
+    _maybe_wait_for_budget()
+    url = f"{base or ESI_BASE}{path}"
     base_params = dict(params or {})
     base_params["page"] = 1
     first = requests.get(url, headers=_headers(token), params=base_params, timeout=30)
+    _record_rate_limit(first)
     first.raise_for_status()
     payload = first.json()
     if not isinstance(payload, list):
@@ -94,11 +105,13 @@ def _get_paged(path: str, *, token=None, params: dict | None = None) -> list:
     total_pages = int(first.headers.get("X-Pages", "1") or "1")
     out: list = list(payload)
     for page in range(2, total_pages + 1):
+        _maybe_wait_for_budget()
         page_params = dict(params or {})
         page_params["page"] = page
         resp = requests.get(
             url, headers=_headers(token), params=page_params, timeout=30
         )
+        _record_rate_limit(resp)
         resp.raise_for_status()
         out.extend(resp.json() or [])
     return out
@@ -182,67 +195,69 @@ _HUB_DETAIL_PATH_TEMPLATE: str | None = None
 _HUB_LIST_PATH_TEMPLATE: str | None = None
 
 
+HUB_LIST_CANDIDATES: tuple[str, ...] = (
+    # Most likely from CCP's naming convention.
+    "/corporations/{corp}/structures/sovereignty_hubs/",
+    "/corporations/{corp}/structures/sovereignty/hubs/",
+    "/corporations/{corp}/sovereignty_hubs/",
+    "/corporations/{corp}/sovereignty/hubs/",
+    "/corporations/{corp}/sov_hubs/",
+    "/corporations/{corp}/sovereignty/structures/",
+)
+
+
 def fetch_corp_sov_hubs_list(token, corporation_id: int) -> list[dict]:
     """Equinox: list of sov hubs owned by ``corporation_id``.
 
     /corporations/{id}/structures/ only returns upwell structures
     (citadels, ECs, refineries); sov hubs introduced by Equinox live
-    behind a separate endpoint. We probe a few likely paths once and
-    cache the working one.
-
-    Returns a list of dicts with at minimum ``structure_id`` and
-    ``solar_system_id``; the exact schema is whatever ESI returns.
-    Empty list if no listing endpoint is found.
+    behind a separate endpoint. We probe candidate path+base combinations
+    once and cache the first one that returns 200.
     """
-    global _HUB_LIST_PATH_TEMPLATE
-    templates = (
-        "/corporations/{corp}/structures/sovereignty_hubs/",
-        "/corporations/{corp}/sovereignty_hubs/",
-        "/corporations/{corp}/sovereignty/hubs/",
-    )
+    global _HUB_LIST_PATH_TEMPLATE, _HUB_LIST_BASE
     if _HUB_LIST_PATH_TEMPLATE:
         try:
             return _get_paged(
-                _HUB_LIST_PATH_TEMPLATE.format(corp=corporation_id), token=token
+                _HUB_LIST_PATH_TEMPLATE.format(corp=corporation_id),
+                token=token,
+                base=_HUB_LIST_BASE,
             )
         except requests.HTTPError as err:
             if err.response.status_code == 404:
                 return []
             raise
-    for template in templates:
-        try:
-            payload = _get_paged(template.format(corp=corporation_id), token=token)
-        except requests.HTTPError as err:
-            if err.response.status_code in (404, 400):
-                continue
-            raise
-        _HUB_LIST_PATH_TEMPLATE = template
-        return payload
+    bases = (ESI_BASE,) + ESI_FALLBACK_BASES
+    for base in bases:
+        for template in HUB_LIST_CANDIDATES:
+            try:
+                payload = _get_paged(
+                    template.format(corp=corporation_id), token=token, base=base
+                )
+            except requests.HTTPError as err:
+                if err.response.status_code in (404, 400):
+                    continue
+                raise
+            _HUB_LIST_PATH_TEMPLATE = template
+            _HUB_LIST_BASE = base
+            return payload
     return []
 
 
+_HUB_LIST_BASE: str = ESI_BASE
+
+
+HUB_DETAIL_CANDIDATES: tuple[str, ...] = (
+    "/corporations/{corp}/structures/sovereignty_hubs/{sid}/",
+    "/corporations/{corp}/structures/sovereignty/hubs/{sid}/",
+    "/corporations/{corp}/structures/{sid}/sovereignty_hub/",
+    "/corporations/{corp}/sovereignty_hubs/{sid}/",
+    "/corporations/{corp}/sovereignty/hubs/{sid}/",
+)
+
+
 def fetch_corp_sov_hub_detail(token, corporation_id: int, structure_id: int) -> dict:
-    """Equinox: GetCorporationsStructuresSovereigntyHubsDetail.
-
-    Returns the live state for a single sov hub owned by ``corporation_id``:
-    installed upgrades (typeId + isOnline + priority), workforce/power
-    consumption, ADM with category breakdown, resource yields, and
-    ansiblex links.
-
-    We probe candidate paths on the *first* call only and remember the
-    one that responds 200; every subsequent call goes straight to the
-    cached template. This is critical for rate-limit hygiene: 60 hubs
-    against 3 dead candidates would burn 120 4xx responses against the
-    error budget per refresh.
-
-    Requires scope ``esi-corporations.read_structures.v1``.
-    """
-    global _HUB_DETAIL_PATH_TEMPLATE
-    templates = (
-        "/corporations/{corp}/structures/sovereignty_hubs/{sid}/",
-        "/corporations/{corp}/structures/{sid}/sovereignty_hub/",
-        "/corporations/{corp}/sovereignty_hubs/{sid}/",
-    )
+    """Equinox: GetCorporationsStructuresSovereigntyHubsDetail."""
+    global _HUB_DETAIL_PATH_TEMPLATE, _HUB_DETAIL_BASE
     if _HUB_DETAIL_PATH_TEMPLATE:
         try:
             return _get(
@@ -250,26 +265,36 @@ def fetch_corp_sov_hub_detail(token, corporation_id: int, structure_id: int) -> 
                     corp=corporation_id, sid=structure_id
                 ),
                 token=token,
+                base=_HUB_DETAIL_BASE,
             )
         except requests.HTTPError as err:
             if err.response.status_code == 404:
-                # The structure may have been demolished; the path is
-                # still likely right. Return empty without re-probing.
                 return {}
             raise
-    for template in templates:
-        try:
-            payload = _get(
-                template.format(corp=corporation_id, sid=structure_id),
-                token=token,
-            )
-        except requests.HTTPError as err:
-            if err.response.status_code in (404, 400):
-                continue
-            raise
-        _HUB_DETAIL_PATH_TEMPLATE = template
-        return payload
+    bases = (ESI_BASE,) + ESI_FALLBACK_BASES
+    # Prefer the same base that worked for the LIST endpoint (more likely
+    # to also work for DETAIL).
+    if _HUB_LIST_BASE != ESI_BASE:
+        bases = (_HUB_LIST_BASE,) + tuple(b for b in bases if b != _HUB_LIST_BASE)
+    for base in bases:
+        for template in HUB_DETAIL_CANDIDATES:
+            try:
+                payload = _get(
+                    template.format(corp=corporation_id, sid=structure_id),
+                    token=token,
+                    base=base,
+                )
+            except requests.HTTPError as err:
+                if err.response.status_code in (404, 400):
+                    continue
+                raise
+            _HUB_DETAIL_PATH_TEMPLATE = template
+            _HUB_DETAIL_BASE = base
+            return payload
     return {}
+
+
+_HUB_DETAIL_BASE: str = ESI_BASE
 
 
 def fetch_structure(token, structure_id: int) -> dict:
