@@ -20,12 +20,20 @@ import time
 import requests
 
 ESI_BASE = "https://esi.evetech.net/latest"
-# Additional bases tried (in order) when an Equinox endpoint isn't found
-# at /latest/ — CCP's new endpoints occasionally land under /dev/ first.
+# Additional bases tried (in order) for Equinox endpoints. CCP moved
+# the new sov-hub/access-list endpoints onto a different host
+# (api.evetech.net / developers.eveonline.com/api), so legacy
+# esi.evetech.net 404s for them entirely.
 ESI_FALLBACK_BASES = (
     "https://esi.evetech.net/dev",
     "https://esi.evetech.net/v1",
     "https://esi.evetech.net/v2",
+    "https://api.evetech.net",
+    "https://api.evetech.net/v1",
+    "https://api.evetech.net/latest",
+    "https://developers.eveonline.com/api",
+    "https://developers.eveonline.com/api/v1",
+    "https://developers.eveonline.com/api/latest",
 )
 USER_AGENT = "aa-sovtool/0.1 (+https://github.com/)"
 
