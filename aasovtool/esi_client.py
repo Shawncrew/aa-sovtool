@@ -15,10 +15,49 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
+import time
+
 import requests
 
 ESI_BASE = "https://esi.evetech.net/latest"
 USER_AGENT = "aa-sovtool/0.1 (+https://github.com/)"
+
+# Rate-limit awareness. ESI advertises a per-IP error budget via the
+# X-ESI-Error-Limit-Remain / X-ESI-Error-Limit-Reset response headers
+# and returns HTTP 420 once the budget is exhausted. We honor it by:
+#   - stopping ourselves before we burn through (soft-back-off when the
+#     remaining budget drops below ERROR_BUDGET_FLOOR)
+#   - sleeping for the advertised reset window if we do get a 420
+_ERROR_BUDGET_FLOOR = 20
+_error_limit_reset_at: float = 0.0
+
+
+def _record_rate_limit(response: requests.Response) -> None:
+    """Inspect ESI rate-limit headers on every response and pause if
+    we're close to the error budget floor or already 420'd.
+    """
+    global _error_limit_reset_at
+    try:
+        remain = int(response.headers.get("X-ESI-Error-Limit-Remain", "100"))
+        reset = int(response.headers.get("X-ESI-Error-Limit-Reset", "0"))
+    except (TypeError, ValueError):
+        return
+    if reset > 0:
+        _error_limit_reset_at = time.monotonic() + reset
+    if response.status_code == 420 or remain <= _ERROR_BUDGET_FLOOR:
+        sleep_for = max(1, reset)
+        time.sleep(sleep_for)
+
+
+def _maybe_wait_for_budget() -> None:
+    """If a previous request told us we hit a 420, sleep until the
+    reset moment before making the next call.
+    """
+    if _error_limit_reset_at <= 0:
+        return
+    delta = _error_limit_reset_at - time.monotonic()
+    if delta > 0:
+        time.sleep(min(delta, 60))
 
 
 def _headers(token=None) -> dict[str, str]:
@@ -30,10 +69,12 @@ def _headers(token=None) -> dict[str, str]:
 
 
 def _get(path: str, *, token=None, params: dict | None = None) -> Any:
+    _maybe_wait_for_budget()
     url = f"{ESI_BASE}{path}"
     response = requests.get(
         url, headers=_headers(token), params=params or {}, timeout=30
     )
+    _record_rate_limit(response)
     response.raise_for_status()
     return response.json()
 
@@ -86,23 +127,37 @@ def fetch_sovereignty_systems() -> list[dict]:
     return _get("/sovereignty/systems/")
 
 
+_RAIDABLE_PATH: str | None = None
+
+
 def fetch_raidable_skyhooks() -> list[dict]:
     """Equinox: rolling list of skyhooks that are currently raidable.
 
-    The blog post introduces this endpoint without naming the exact path;
-    we try the documented candidates in order.
+    Caches the working path after the first successful probe so we
+    don't bleed the error budget on every refresh.
     """
-    for path in (
+    global _RAIDABLE_PATH
+    candidates = (
         "/sovereignty/skyhooks/raidable/",
         "/sovereignty/raidable/",
         "/universe/skyhooks/raidable/",
-    ):
+    )
+    if _RAIDABLE_PATH:
         try:
-            return _get(path)
+            return _get(_RAIDABLE_PATH)
+        except requests.HTTPError as err:
+            if err.response.status_code == 404:
+                return []
+            raise
+    for path in candidates:
+        try:
+            payload = _get(path)
         except requests.HTTPError as err:
             if err.response.status_code in (404, 400):
                 continue
             raise
+        _RAIDABLE_PATH = path
+        return payload
     return []
 
 
@@ -121,28 +176,59 @@ def fetch_corp_structures(token, corporation_id: int) -> list[dict]:
     )
 
 
+# Cache the path template that actually works once we discover it, so we
+# don't keep blasting all candidates and burning the ESI error budget.
+_HUB_DETAIL_PATH_TEMPLATE: str | None = None
+
+
 def fetch_corp_sov_hub_detail(token, corporation_id: int, structure_id: int) -> dict:
     """Equinox: GetCorporationsStructuresSovereigntyHubsDetail.
 
     Returns the live state for a single sov hub owned by ``corporation_id``:
     installed upgrades (typeId + isOnline + priority), workforce/power
     consumption, ADM with category breakdown, resource yields, and
-    ansiblex links. We try the documented + likely candidate paths so we
-    work against both the dev preview and the published spec.
+    ansiblex links.
+
+    We probe candidate paths on the *first* call only and remember the
+    one that responds 200; every subsequent call goes straight to the
+    cached template. This is critical for rate-limit hygiene: 60 hubs
+    against 3 dead candidates would burn 120 4xx responses against the
+    error budget per refresh.
+
     Requires scope ``esi-corporations.read_structures.v1``.
     """
-    candidates = (
-        f"/corporations/{corporation_id}/structures/sovereignty_hubs/{structure_id}/",
-        f"/corporations/{corporation_id}/structures/{structure_id}/sovereignty_hub/",
-        f"/corporations/{corporation_id}/sovereignty_hubs/{structure_id}/",
+    global _HUB_DETAIL_PATH_TEMPLATE
+    templates = (
+        "/corporations/{corp}/structures/sovereignty_hubs/{sid}/",
+        "/corporations/{corp}/structures/{sid}/sovereignty_hub/",
+        "/corporations/{corp}/sovereignty_hubs/{sid}/",
     )
-    for path in candidates:
+    if _HUB_DETAIL_PATH_TEMPLATE:
         try:
-            return _get(path, token=token)
+            return _get(
+                _HUB_DETAIL_PATH_TEMPLATE.format(
+                    corp=corporation_id, sid=structure_id
+                ),
+                token=token,
+            )
+        except requests.HTTPError as err:
+            if err.response.status_code == 404:
+                # The structure may have been demolished; the path is
+                # still likely right. Return empty without re-probing.
+                return {}
+            raise
+    for template in templates:
+        try:
+            payload = _get(
+                template.format(corp=corporation_id, sid=structure_id),
+                token=token,
+            )
         except requests.HTTPError as err:
             if err.response.status_code in (404, 400):
                 continue
             raise
+        _HUB_DETAIL_PATH_TEMPLATE = template
+        return payload
     return {}
 
 
@@ -151,36 +237,65 @@ def fetch_structure(token, structure_id: int) -> dict:
     return _get(f"/universe/structures/{structure_id}/", token=token)
 
 
+_ACCESS_LIST_PATH_TEMPLATE: str | None = None
+_ACCESS_LIST_MEMBERS_PATH_TEMPLATE: str | None = None
+
+
 def fetch_structure_access_lists(token, structure_id: int) -> list[dict]:
     """Equinox: access lists attached to a structure.
 
-    Tries the candidate endpoints introduced in the Equinox blog post.
+    Caches the working path template after the first successful probe.
     """
-    for path in (
-        f"/structures/{structure_id}/access_lists/",
-        f"/universe/structures/{structure_id}/access_lists/",
-    ):
+    global _ACCESS_LIST_PATH_TEMPLATE
+    templates = (
+        "/structures/{sid}/access_lists/",
+        "/universe/structures/{sid}/access_lists/",
+    )
+    if _ACCESS_LIST_PATH_TEMPLATE:
         try:
-            return _get(path, token=token)
+            return _get(_ACCESS_LIST_PATH_TEMPLATE.format(sid=structure_id), token=token)
+        except requests.HTTPError as err:
+            if err.response.status_code == 404:
+                return []
+            raise
+    for template in templates:
+        try:
+            payload = _get(template.format(sid=structure_id), token=token)
         except requests.HTTPError as err:
             if err.response.status_code in (404, 400):
                 continue
             raise
+        _ACCESS_LIST_PATH_TEMPLATE = template
+        return payload
     return []
 
 
 def fetch_access_list_members(token, access_list_id: int) -> list[dict]:
     """Retrieve members of an access list."""
-    for path in (
-        f"/access_lists/{access_list_id}/members/",
-        f"/access_lists/{access_list_id}/",
-    ):
+    global _ACCESS_LIST_MEMBERS_PATH_TEMPLATE
+    templates = (
+        "/access_lists/{alid}/members/",
+        "/access_lists/{alid}/",
+    )
+    if _ACCESS_LIST_MEMBERS_PATH_TEMPLATE:
         try:
-            return _get(path, token=token)
+            return _get(
+                _ACCESS_LIST_MEMBERS_PATH_TEMPLATE.format(alid=access_list_id),
+                token=token,
+            )
+        except requests.HTTPError as err:
+            if err.response.status_code == 404:
+                return []
+            raise
+    for template in templates:
+        try:
+            payload = _get(template.format(alid=access_list_id), token=token)
         except requests.HTTPError as err:
             if err.response.status_code in (404, 400):
                 continue
             raise
+        _ACCESS_LIST_MEMBERS_PATH_TEMPLATE = template
+        return payload
     return []
 
 
