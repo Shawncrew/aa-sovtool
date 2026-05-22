@@ -199,17 +199,14 @@ def _unwrap_list(payload, keys: tuple[str, ...]) -> list[dict]:
 
 
 def fetch_sovereignty_structures() -> list[dict]:
-    """List of all sov structures (public). Returns [] if CCP has moved
-    the endpoint and none of our candidates match — the rest of the
-    refresh still proceeds.
+    """Legacy ESI-wide sov-structures listing.
+
+    CCP retired this endpoint in the Equinox API rollout. The
+    replacement is :func:`fetch_sovereignty_systems` which exposes
+    per-system claim data (faction/alliance/corp) for all of K-space.
+    Kept as a stub returning [] so old callers don't crash.
     """
-    payload = _try_public_paths_safe(
-        ("https://esi.evetech.net", "/sovereignty/structures"),
-        ("https://esi.evetech.net", "/sovereignty-structures"),
-        ("https://esi.evetech.net", "/sovereignty/structures/list"),
-        (ESI_BASE, "/sovereignty/structures/"),
-    )
-    return _unwrap_list(payload, ("structures", "sovereignty_structures", "items"))
+    return []
 
 
 def fetch_sovereignty_map() -> list[dict]:
@@ -231,13 +228,23 @@ def fetch_sovereignty_campaigns() -> list[dict]:
 
 
 def fetch_sovereignty_systems() -> list[dict]:
-    """Equinox combined occupancy + ADM data per system."""
+    """Equinox per-system sov details (replaces /sovereignty/structures/).
+
+    Confirmed endpoint:
+        GET https://esi.evetech.net/sovereignty/systems
+        X-Compatibility-Date: 2026-05-19
+    No scope required (public). Cached for 5 minutes; rate-limit
+    group 'sovereignty', 600 tokens / 15 minutes.
+
+    Response shape:
+        {"solar_systems": [
+            {"claim": {"faction": {"faction_id": ...} | alliance | corp}, ...}
+        ]}
+    """
     payload = _try_public_paths_safe(
         ("https://esi.evetech.net", "/sovereignty/systems"),
-        ("https://esi.evetech.net", "/sovereignty-systems"),
-        (ESI_BASE, "/sovereignty/systems/"),
     )
-    return _unwrap_list(payload, ("systems", "sovereignty_systems"))
+    return _unwrap_list(payload, ("solar_systems", "systems", "sovereignty_systems"))
 
 
 _RAIDABLE_PATH: str | None = None

@@ -22,84 +22,151 @@ def _parse_dt(value):
 
 
 @shared_task(name="aasovtool.refresh_sovereignty_structures")
-def refresh_sovereignty_structures() -> int:  # noqa: C901 - readability trumps splitting
-    """Refresh the public /sovereignty/structures/ + /sovereignty/systems/ data."""
-    structures = esi_client.fetch_sovereignty_structures()
-    sov_systems = []
+def refresh_sovereignty_structures() -> int:  # noqa: C901
+    """Refresh public sovereignty data per K-space system.
+
+    The legacy /sovereignty/structures/ EVE-wide listing was retired in
+    the Equinox API rollout. Its replacement is /sovereignty/systems,
+    which returns a ``claim`` block per K-space system describing who
+    holds it (faction / alliance / corporation) plus ADM data.
+
+    We upsert one ``SovStructure`` row per claimed system, keyed off
+    ``solar_system_id`` (since there's only one sov hub per system).
+    Hubs the corp owns get linked up later in ``refresh_corp_sov_hubs``
+    via the structure_id from the corp-scoped listing.
+    """
     try:
         sov_systems = esi_client.fetch_sovereignty_systems()
     except Exception:
-        # Endpoint may not yet be live in all envs; fall back silently.
         sov_systems = []
 
-    raidable = {}
+    raidable: dict[int, dict] = {}
     try:
         for row in esi_client.fetch_raidable_skyhooks():
-            sid = row.get("structure_id")
+            sid = row.get("structure_id") or row.get("id")
             if sid:
                 raidable[int(sid)] = row
     except Exception:
         raidable = {}
 
-    adm_by_system = {
-        int(row.get("system_id", 0)): row for row in sov_systems if row.get("system_id")
-    }
-
-    # Resolve type + system names in one pass
-    name_ids = set()
-    for s in structures:
-        name_ids.add(s.get("structure_type_id"))
-        name_ids.add(s.get("solar_system_id"))
+    # Resolve system + alliance names in one batch.
+    name_ids: set[int] = set()
+    for row in sov_systems:
+        sid = row.get("solar_system_id") or row.get("system_id")
+        if sid:
+            name_ids.add(int(sid))
+        claim = row.get("claim") or {}
+        for entity in ("alliance", "corporation", "faction"):
+            block = claim.get(entity) or {}
+            entity_id = (
+                block.get(f"{entity}_id")
+                or block.get("id")
+            )
+            if entity_id:
+                name_ids.add(int(entity_id))
     name_map = esi_client.resolve_names(name_ids)
 
-    seen_ids: list[int] = []
-    for entry in structures:
-        sid = entry.get("structure_id")
-        if not sid:
+    seen_system_ids: list[int] = []
+    for entry in sov_systems:
+        system_id = entry.get("solar_system_id") or entry.get("system_id")
+        if not system_id:
             continue
-        seen_ids.append(int(sid))
-        adm_row = adm_by_system.get(int(entry.get("solar_system_id", 0)), {})
-        raid_row = raidable.get(int(sid), {})
-        models.SovStructure.objects.update_or_create(
-            structure_id=sid,
-            defaults={
-                "structure_type_id": entry.get("structure_type_id") or 0,
-                "structure_type_name": name_map.get(
-                    entry.get("structure_type_id"), ""
-                ),
-                "solar_system_id": entry.get("solar_system_id") or 0,
-                "solar_system_name": name_map.get(
-                    entry.get("solar_system_id"), ""
-                ),
-                "alliance_id": entry.get("alliance_id"),
-                "corporation_id": entry.get("corporation_id"),
-                "vulnerability_occupancy_level": entry.get(
-                    "vulnerability_occupancy_level"
-                ),
-                "vulnerable_start_time": _parse_dt(entry.get("vulnerable_start_time")),
-                "vulnerable_end_time": _parse_dt(entry.get("vulnerable_end_time")),
-                "activity_defense_multiplier": adm_row.get(
-                    "activity_defense_multiplier"
-                ),
-                "activity_defense_breakdown": adm_row.get(
-                    "activity_defense_breakdown", {}
-                ) or {},
-                "is_raidable": bool(raid_row),
-                "raidable_until": _parse_dt(raid_row.get("raidable_until")),
-                "last_seen_at": timezone.now(),
-            },
+        seen_system_ids.append(int(system_id))
+        claim = entry.get("claim") or {}
+        alliance = (claim.get("alliance") or {})
+        corporation = (claim.get("corporation") or {})
+        faction = (claim.get("faction") or {})
+        alliance_id = alliance.get("alliance_id") or alliance.get("id")
+        corp_id = corporation.get("corporation_id") or corporation.get("id")
+        faction_id = faction.get("faction_id") or faction.get("id")
+        adm = entry.get("activity_defense_multiplier") or claim.get(
+            "activity_defense_multiplier"
         )
-    # ESI is authoritative: drop any cached sov structures that are no
-    # longer reported by /sovereignty/structures/ (demolished, unanchored,
-    # etc). We only do this when ESI actually returned a non-empty list to
-    # avoid wiping the cache if the call failed silently.
-    if seen_ids:
-        deleted, _ = models.SovStructure.objects.exclude(
-            structure_id__in=seen_ids
-        ).delete()
+        adm_breakdown = entry.get("activity_defense_breakdown") or claim.get(
+            "activity_defense_breakdown"
+        )
+        vuln = entry.get("vulnerability_window") or claim.get("vulnerability_window") or {}
+
+        # Defensively dedupe legacy rows from a previous schema.
+        existing_rows = list(
+            models.SovStructure.objects.filter(solar_system_id=int(system_id))
+        )
+        if len(existing_rows) > 1:
+            # Keep the one with a positive (real) structure_id if any,
+            # else the first; delete the rest.
+            keep = next(
+                (r for r in existing_rows if (r.structure_id or 0) > 0),
+                existing_rows[0],
+            )
+            for r in existing_rows:
+                if r.pk != keep.pk:
+                    r.delete()
+            existing_rows = [keep]
+
+        existing = existing_rows[0] if existing_rows else None
+
+        # Preserve a real positive structure_id if it's already been
+        # attached by refresh_corp_sov_hubs; otherwise use a synthetic
+        # negative one keyed on system_id.
+        structure_id_value = (
+            existing.structure_id
+            if existing and (existing.structure_id or 0) > 0
+            else -int(system_id)
+        )
+        update_fields = {
+            "structure_id": structure_id_value,
+            "structure_type_id": existing.structure_type_id if existing else 0,
+            "structure_type_name": existing.structure_type_name
+            if existing and existing.structure_type_name
+            else "Sov Hub",
+            "solar_system_name": name_map.get(int(system_id), "") or (
+                existing.solar_system_name if existing else ""
+            ),
+            "alliance_id": alliance_id,
+            "corporation_id": corp_id or faction_id or (
+                existing.corporation_id if existing else None
+            ),
+            "vulnerable_start_time": _parse_dt(vuln.get("start")),
+            "vulnerable_end_time": _parse_dt(vuln.get("end")),
+            "activity_defense_multiplier": adm,
+            "activity_defense_breakdown": adm_breakdown or {},
+            "is_raidable": False,  # raidable feed is per-skyhook, set below
+            "raidable_until": None,
+            "last_seen_at": timezone.now(),
+        }
+        if existing:
+            for k, v in update_fields.items():
+                setattr(existing, k, v)
+            existing.save()
+        else:
+            models.SovStructure.objects.create(
+                solar_system_id=int(system_id), **update_fields
+            )
+    # Cross-reference raidable feed (keyed on structure_id) onto the
+    # rows we just upserted. The corp refresh will later fill in the
+    # real structure_id for hubs we own; for systems we don't own this
+    # stays synthetic.
+    if raidable:
+        for sid_int in raidable.keys():
+            models.SovStructure.objects.filter(structure_id=sid_int).update(
+                is_raidable=True,
+                raidable_until=_parse_dt(raidable[sid_int].get("raidable_until")),
+            )
+
+    # Prune systems no longer in the listing.
+    if seen_system_ids:
+        # Don't delete rows that hold a *real* (positive) structure_id —
+        # those were attached by refresh_corp_sov_hubs and are still
+        # valid even when the public claim listing churns.
+        stale = (
+            models.SovStructure.objects.filter(structure_id__lt=0)
+            .exclude(solar_system_id__in=seen_system_ids)
+        )
+        deleted = stale.count()
         if deleted:
+            stale.delete()
             print(f"[sovtool] Pruned {deleted} stale SovStructure rows.")
-    return len(seen_ids)
+    return len(seen_system_ids)
 
 
 @shared_task(name="aasovtool.refresh_corp_structures")
@@ -315,26 +382,31 @@ def refresh_corp_sov_hubs() -> int:
         if not owned_ids:
             continue
         corp_owned_hub_ids.update(owned_ids)
-        # If the public /sovereignty/structures endpoint is unavailable
-        # (CCP shuffled it during Equinox rollout), the SovStructure
-        # table will be empty for the hubs we need to detail. Seed
-        # minimal rows from the LIST endpoint payload so hub_detail has
-        # somewhere to land.
-        existing = set(
-            models.SovStructure.objects.filter(structure_id__in=owned_ids).values_list(
-                "structure_id", flat=True
-            )
-        )
+        # Sync corp-owned hub rows: when refresh_sovereignty_structures
+        # has run, there's already a row per system keyed on
+        # solar_system_id (with a synthetic negative structure_id). We
+        # upgrade those in place — overwriting structure_id with the
+        # real one and tagging the corp. If there's no row yet, create.
         for entry in hub_list:
-            sid = int(entry.get("id") or entry.get("structure_id") or 0)
-            if not sid or sid in existing:
+            real_sid = int(entry.get("id") or entry.get("structure_id") or 0)
+            system_id = int(entry.get("solar_system_id") or 0)
+            if not real_sid or not system_id:
                 continue
-            models.SovStructure.objects.create(
-                structure_id=sid,
-                structure_type_id=0,
-                solar_system_id=int(entry.get("solar_system_id") or 0),
-                corporation_id=record.corporation_id,
-            )
+            row = models.SovStructure.objects.filter(
+                solar_system_id=system_id
+            ).first()
+            if row:
+                if row.structure_id != real_sid:
+                    row.structure_id = real_sid
+                row.corporation_id = record.corporation_id
+                row.save(update_fields=["structure_id", "corporation_id"])
+            else:
+                models.SovStructure.objects.create(
+                    structure_id=real_sid,
+                    structure_type_id=0,
+                    solar_system_id=system_id,
+                    corporation_id=record.corporation_id,
+                )
         hubs = models.SovStructure.objects.filter(structure_id__in=owned_ids)
         for hub in hubs:
             try:
