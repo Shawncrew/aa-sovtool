@@ -16,7 +16,7 @@ import requests
 from aasovtool import esi_client, models
 
 
-BATCH = 500
+BATCH = 100  # /universe/ids/ 504s on larger batches in practice
 
 
 class Command(BaseCommand):
@@ -28,9 +28,23 @@ class Command(BaseCommand):
             action="store_true",
             help="Re-resolve even systems whose solar_system_id is already set.",
         )
+        parser.add_argument(
+            "--all-regions",
+            action="store_true",
+            help="Resolve every cached System (~8000+). Default: only "
+            "systems in AASOVTOOL_ALLOWED_REGIONS.",
+        )
 
-    def handle(self, *args, force: bool, **opts):
+    def handle(self, *args, force: bool, all_regions: bool, **opts):
+        from aasovtool import app_settings
+
         qs = models.System.objects.all()
+        if not all_regions:
+            allowed = app_settings.AASOVTOOL_ALLOWED_REGIONS
+            if allowed:
+                qs = qs.filter(
+                    region_name__iregex=r"^(%s)$" % "|".join(allowed)
+                )
         if not force:
             qs = qs.filter(solar_system_id__isnull=True)
 
@@ -41,22 +55,41 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Resolving {len(names)} system names via ESI…")
 
+        import time as _time
+
         resolved: dict[str, int] = {}
         unresolved: list[str] = []
         for i in range(0, len(names), BATCH):
             chunk = names[i : i + BATCH]
-            try:
-                resp = requests.post(
-                    f"{esi_client.ESI_BASE}/universe/ids/",
-                    json=chunk,
-                    headers=esi_client._headers(),
-                    timeout=30,
-                )
-                resp.raise_for_status()
-            except requests.HTTPError as e:
-                self.stderr.write(
-                    self.style.ERROR(f"  batch starting at {i}: HTTP {e.response.status_code}")
-                )
+            for attempt in range(3):
+                try:
+                    resp = requests.post(
+                        f"{esi_client.ESI_BASE}/universe/ids/",
+                        json=chunk,
+                        headers=esi_client._headers(),
+                        timeout=60,
+                    )
+                    resp.raise_for_status()
+                    break
+                except requests.HTTPError as e:
+                    status = e.response.status_code
+                    if status in (502, 503, 504) and attempt < 2:
+                        wait = 2 ** attempt
+                        self.stdout.write(
+                            f"  batch starting at {i}: HTTP {status}, retry in {wait}s"
+                        )
+                        _time.sleep(wait)
+                        continue
+                    self.stderr.write(
+                        self.style.ERROR(f"  batch starting at {i}: HTTP {status}, giving up")
+                    )
+                    resp = None
+                    break
+                except requests.RequestException as e:
+                    self.stderr.write(self.style.ERROR(f"  batch starting at {i}: {e}"))
+                    resp = None
+                    break
+            if resp is None or not resp.ok:
                 continue
             data = resp.json() or {}
             systems_block = data.get("systems") or []
