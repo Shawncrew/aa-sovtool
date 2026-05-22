@@ -43,25 +43,31 @@ _error_limit_reset_at: float = 0.0
 
 
 def _record_rate_limit(response: requests.Response) -> None:
-    """Inspect ESI rate-limit headers on every response and pause if
-    we're close to the error budget floor or already 420'd.
+    """Inspect ESI rate-limit headers and arm a cooldown ONLY if the
+    error budget is actually low or exhausted.
+
+    Previous bug: we set ``_error_limit_reset_at`` on every response,
+    which caused subsequent calls to sleep ~60s between *every*
+    request. We only care when we're about to trip the limiter.
     """
     global _error_limit_reset_at
     try:
-        remain = int(response.headers.get("X-ESI-Error-Limit-Remain", "100"))
-        reset = int(response.headers.get("X-ESI-Error-Limit-Reset", "0"))
+        remain_raw = response.headers.get("X-ESI-Error-Limit-Remain")
+        reset_raw = response.headers.get("X-ESI-Error-Limit-Reset")
+        if remain_raw is None and reset_raw is None:
+            return
+        remain = int(remain_raw) if remain_raw is not None else 100
+        reset = int(reset_raw) if reset_raw is not None else 0
     except (TypeError, ValueError):
         return
-    if reset > 0:
-        _error_limit_reset_at = time.monotonic() + reset
     if response.status_code == 420 or remain <= _ERROR_BUDGET_FLOOR:
-        sleep_for = max(1, reset)
-        time.sleep(sleep_for)
+        _error_limit_reset_at = time.monotonic() + max(1, reset)
+        time.sleep(max(1, reset))
 
 
 def _maybe_wait_for_budget() -> None:
-    """If a previous request told us we hit a 420, sleep until the
-    reset moment before making the next call.
+    """If a previous request armed the cooldown, sleep until the
+    advertised reset moment before making the next call.
     """
     if _error_limit_reset_at <= 0:
         return
