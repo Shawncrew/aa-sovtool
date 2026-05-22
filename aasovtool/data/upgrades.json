@@ -1,0 +1,354 @@
+[
+  {
+    "typeID":81623,
+    "upgradeName":"Supercapital Construction Facilities",
+    "power":1750,
+    "workforce":17500,
+    "superionicIcePerHour":90,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":81621,
+    "upgradeName":"Advanced Logistics Network",
+    "power":500,
+    "workforce":18100,
+    "superionicIcePerHour":25,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":81619,
+    "upgradeName":"Cynosural Suppression",
+    "power":250,
+    "workforce":4500,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":205
+  },
+  {
+    "typeID":81615,
+    "upgradeName":"Cynosural Navigation",
+    "power":250,
+    "workforce":1500,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":205
+  },
+  {
+    "typeID":82499,
+    "upgradeName":"Minor Threat Detection Array 1",
+    "power":200,
+    "workforce":1800,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":82500,
+    "upgradeName":"Minor Threat Detection Array 2",
+    "power":500,
+    "workforce":3800,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":82492,
+    "upgradeName":"Minor Threat Detection Array 3",
+    "power":700,
+    "workforce":5400,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":82496,
+    "upgradeName":"Major Threat Detection Array 1",
+    "power":400,
+    "workforce":2700,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":82497,
+    "upgradeName":"Major Threat Detection Array 2",
+    "power":900,
+    "workforce":5400,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":82498,
+    "upgradeName":"Major Threat Detection Array 3",
+    "power":1300,
+    "workforce":7300,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":82579,
+    "upgradeName":"Tritanium Prospecting Array 1",
+    "power":450,
+    "workforce":6400,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":82592,
+    "upgradeName":"Tritanium Prospecting Array 2",
+    "power":1220,
+    "workforce":12700,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":87702,
+    "upgradeName":"Tritanium Prospecting Array 3",
+    "power":1800,
+    "workforce":18100,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":82589,
+    "upgradeName":"Pyerite Prospecting Array 1",
+    "power":450,
+    "workforce":6400,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":82588,
+    "upgradeName":"Pyerite Prospecting Array 2",
+    "power":1220,
+    "workforce":12700,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":87704,
+    "upgradeName":"Pyerite Prospecting Array 3",
+    "power":1800,
+    "workforce":18100,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":82591,
+    "upgradeName":"Mexallon Prospecting Array 1",
+    "power":450,
+    "workforce":6400,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":82590,
+    "upgradeName":"Mexallon Prospecting Array 2",
+    "power":1220,
+    "workforce":12700,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":87705,
+    "upgradeName":"Mexallon Prospecting Array 3",
+    "power":1800,
+    "workforce":18100,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":82581,
+    "upgradeName":"Isogen Prospecting Array 1",
+    "power":450,
+    "workforce":6400,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":82580,
+    "upgradeName":"Isogen Prospecting Array 2",
+    "power":1220,
+    "workforce":12700,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":87706,
+    "upgradeName":"Isogen Prospecting Array 3",
+    "power":1800,
+    "workforce":18100,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":82583,
+    "upgradeName":"Nocxium Prospecting Array 1",
+    "power":450,
+    "workforce":6400,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":82582,
+    "upgradeName":"Nocxium Prospecting Array 2",
+    "power":1220,
+    "workforce":12700,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":87707,
+    "upgradeName":"Nocxium Prospecting Array 3",
+    "power":1800,
+    "workforce":18100,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":82585,
+    "upgradeName":"Zydrine Prospecting Array 1",
+    "power":450,
+    "workforce":6400,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":82584,
+    "upgradeName":"Zydrine Prospecting Array 2",
+    "power":1220,
+    "workforce":12700,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":87708,
+    "upgradeName":"Zydrine Prospecting Array 3",
+    "power":1800,
+    "workforce":18100,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":82587,
+    "upgradeName":"Megacyte Prospecting Array 1",
+    "power":450,
+    "workforce":6400,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":82586,
+    "upgradeName":"Megacyte Prospecting Array 2",
+    "power":1220,
+    "workforce":12700,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":87709,
+    "upgradeName":"Megacyte Prospecting Array 3",
+    "power":1800,
+    "workforce":18100,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":91001,
+    "upgradeName":"Workforce Mecha-Tooling 1",
+    "power":200,
+    "workforce":-5000,
+    "superionicIcePerHour":8,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":91002,
+    "upgradeName":"Workforce Mecha-Tooling 2",
+    "power":500,
+    "workforce":-10000,
+    "superionicIcePerHour":25,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":91003,
+    "upgradeName":"Workforce Mecha-Tooling 3",
+    "power":800,
+    "workforce":-15000,
+    "superionicIcePerHour":42,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":91004,
+    "upgradeName":"Power Monitoring Division 1",
+    "power":-200,
+    "workforce":2500,
+    "superionicIcePerHour":8,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":91005,
+    "upgradeName":"Power Monitoring Division 2",
+    "power":-500,
+    "workforce":10000,
+    "superionicIcePerHour":25,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":91006,
+    "upgradeName":"Power Monitoring Division 3",
+    "power":-1000,
+    "workforce":25000,
+    "superionicIcePerHour":42,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":92001,
+    "upgradeName":"Exploration Detector 1",
+    "power":400,
+    "workforce":4000,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":92002,
+    "upgradeName":"Exploration Detector 2",
+    "power":850,
+    "workforce":8000,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":92003,
+    "upgradeName":"Exploration Detector 3",
+    "power":1300,
+    "workforce":12000,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":92011,
+    "upgradeName":"Electric Stability Generator",
+    "power":200,
+    "workforce":2700,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":7
+  },
+  {
+    "typeID":92012,
+    "upgradeName":"Exotic Stability Generator",
+    "power":200,
+    "workforce":2700,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":7
+  },
+  {
+    "typeID":92013,
+    "upgradeName":"Gamma Stability Generator",
+    "power":200,
+    "workforce":2700,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":7
+  },
+  {
+    "typeID":92014,
+    "upgradeName":"Plasma Stability Generator",
+    "power":200,
+    "workforce":2700,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":7
+  }
+]

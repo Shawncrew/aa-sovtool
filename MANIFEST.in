@@ -1,0 +1,5 @@
+recursive-include aasovtool/static *
+recursive-include aasovtool/templates *
+recursive-include aasovtool/data *
+include README.md
+include LICENSE

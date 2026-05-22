@@ -1,0 +1,81 @@
+.react-flow__nodes {
+  z-index: 10;
+}
+.root-gradient,
+body {
+  background-color: #05060d;
+  background-image:
+    radial-gradient(120% 120% at 12% 12%, rgba(247, 75, 104, 0.16) 0%, rgba(10, 9, 19, 0) 55%),
+    radial-gradient(80% 80% at 88% 8%, rgba(73, 215, 255, 0.12) 0%, rgba(6, 6, 13, 0) 60%),
+    linear-gradient(180deg, #05060d 0%, #090914 55%, #160b15 100%);
+  color: #f4f3fb;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+}
+
+.transfer-edge-base {
+  stroke: rgba(34, 197, 94, 0.25);
+  stroke-width: 15px;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px rgba(74, 222, 128, 0.4));
+}
+
+.transfer-edge-overlay {
+  stroke: #22c55e;
+  stroke-width: 10px;
+  stroke-linecap: round;
+  stroke-dasharray: 20  20;
+  animation: transfer-flow 1.3s linear infinite;
+}
+
+.ansiblex-flow {
+  stroke-dasharray: 30 80;
+}
+
+.ansiblex-flow-forward {
+  animation: ansiblex-flow 1.1s linear infinite;
+}
+
+.ansiblex-flow-reverse {
+  animation: ansiblex-flow 1.1s linear infinite reverse;
+}
+
+.react-flow__edges .ansiblex-edge path {
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.react-flow__edges .ansiblex-edge {
+  z-index: -1;
+}
+
+@keyframes ansiblex-flow {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -84;
+  }
+}
+
+
+@keyframes transfer-flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -72;
+  }
+}
+
+/* Style dropdown options to be white */
+select option {
+  background-color: #130f22;
+  color: white;
+}
+
+

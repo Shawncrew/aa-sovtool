@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.env
+
+# Django
+*.sqlite3
+local_settings.py
+
+# Node / Vite
+node_modules/
+frontend/dist/
+aasovtool/static/aasovtool/assets/
+aasovtool/static/aasovtool/manifest.json
+aasovtool/static/aasovtool/.vite/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
