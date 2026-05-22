@@ -20,20 +20,15 @@ import time
 import requests
 
 ESI_BASE = "https://esi.evetech.net/latest"
-# Additional bases tried (in order) for Equinox endpoints. CCP moved
-# the new sov-hub/access-list endpoints onto a different host
-# (api.evetech.net / developers.eveonline.com/api), so legacy
-# esi.evetech.net 404s for them entirely.
+# Additional bases tried (in order) for Equinox endpoints. CCP serves
+# the new sov-hub/access-list endpoints from the bare host without a
+# version prefix (confirmed via API explorer):
+#   https://esi.evetech.net/corporations/{id}/structures/sovereignty-hubs
 ESI_FALLBACK_BASES = (
+    "https://esi.evetech.net",
     "https://esi.evetech.net/dev",
     "https://esi.evetech.net/v1",
     "https://esi.evetech.net/v2",
-    "https://api.evetech.net",
-    "https://api.evetech.net/v1",
-    "https://api.evetech.net/latest",
-    "https://developers.eveonline.com/api",
-    "https://developers.eveonline.com/api/v1",
-    "https://developers.eveonline.com/api/latest",
 )
 USER_AGENT = "aa-sovtool/0.1 (+https://github.com/)"
 
@@ -203,14 +198,17 @@ _HUB_DETAIL_PATH_TEMPLATE: str | None = None
 _HUB_LIST_PATH_TEMPLATE: str | None = None
 
 
+# Confirmed Equinox endpoint: base is bare https://esi.evetech.net (no
+# version prefix) and the path uses dashes, not underscores. We list
+# this candidate first so it always wins on the first probe; the older
+# guesses remain only as defensive fallbacks if CCP later renames it.
+EQUINOX_BASE = "https://esi.evetech.net"
 HUB_LIST_CANDIDATES: tuple[str, ...] = (
-    # Most likely from CCP's naming convention.
+    "/corporations/{corp}/structures/sovereignty-hubs",
     "/corporations/{corp}/structures/sovereignty_hubs/",
     "/corporations/{corp}/structures/sovereignty/hubs/",
+    "/corporations/{corp}/sovereignty-hubs",
     "/corporations/{corp}/sovereignty_hubs/",
-    "/corporations/{corp}/sovereignty/hubs/",
-    "/corporations/{corp}/sov_hubs/",
-    "/corporations/{corp}/sovereignty/structures/",
 )
 
 
@@ -255,11 +253,13 @@ _HUB_LIST_BASE: str = ESI_BASE
 
 
 HUB_DETAIL_CANDIDATES: tuple[str, ...] = (
+    # Confirmed-style dash path on the bare host (follows the LIST pattern).
+    "/corporations/{corp}/structures/sovereignty-hubs/{sid}",
     "/corporations/{corp}/structures/sovereignty_hubs/{sid}/",
     "/corporations/{corp}/structures/sovereignty/hubs/{sid}/",
     "/corporations/{corp}/structures/{sid}/sovereignty_hub/",
+    "/corporations/{corp}/sovereignty-hubs/{sid}",
     "/corporations/{corp}/sovereignty_hubs/{sid}/",
-    "/corporations/{corp}/sovereignty/hubs/{sid}/",
 )
 
 
