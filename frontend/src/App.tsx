@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 
@@ -184,6 +185,44 @@ function App() {
   const queryClient = useQueryClient();
   const [authState, setAuthState] = useState<AuthState | null>(() => loadStoredAuth());
   const [authResolved, setAuthResolved] = useState(false);
+  // Container in the AA navbar that we'll portal our toolbar into.
+  const [toolbarTarget, setToolbarTarget] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    let target = document.getElementById("aa-sovtool-toolbar-target");
+    let createdHere = false;
+    if (!target) {
+      // Try a handful of selectors so we cope with both AA's Bootstrap 5
+      // base ("base-bs5.html") and any custom themes. We aim for the
+      // rightmost container inside the top navbar.
+      const candidates = [
+        "nav.navbar .navbar-nav.ms-auto",
+        "nav.navbar .ms-auto",
+        "nav.navbar .navbar-collapse",
+        "nav.navbar .container-fluid",
+        "nav.navbar",
+        "header nav",
+      ];
+      let host: Element | null = null;
+      for (const selector of candidates) {
+        host = document.querySelector(selector);
+        if (host) break;
+      }
+      if (host) {
+        target = document.createElement("div");
+        target.id = "aa-sovtool-toolbar-target";
+        target.className = "d-flex align-items-center";
+        host.appendChild(target);
+        createdHere = true;
+      }
+    }
+    setToolbarTarget(target);
+    return () => {
+      if (createdHere && target?.parentNode) {
+        target.parentNode.removeChild(target);
+      }
+    };
+  }, []);
   useEffect(() => {
     let cancelled = false;
     fetchCurrentUser()
@@ -2087,69 +2126,73 @@ function App() {
 
   return (
     <div className="relative flex flex-col bg-gradient-to-br from-[#06060d] via-[#0d101f] to-[#1b0f1b] text-[#f2ecff]" style={{ height: "calc(100vh - 120px)" }}>
-      {/* Compact floating toolbar — banner, manage-users, language and
-          logout are intentionally omitted; authentication, users, and
-          permissions are now handled in Alliance Auth. Positioned
-          absolute within this relative wrapper so it sits inside the
-          planner area (not under AA's top blue bar). */}
-      <div className="pointer-events-none absolute right-3 top-3 z-40 flex flex-wrap items-center justify-end gap-2">
-        {canEdit && (
+      {/* The toolbar (Save / Add Corp Token / color mode / history /
+          backup) is rendered via React Portal into Alliance Auth's
+          blue top navbar — see toolbarTarget useEffect below. AA owns
+          authentication, users, and translations; we don't render any
+          banner of our own in the planner area. */}
+      {toolbarTarget && createPortal(
+        <div className="d-flex flex-wrap align-items-center gap-2 ms-auto me-3" style={{ pointerEvents: "auto" }}>
+          {canEdit && (
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-danger"
+              onClick={handleSaveScenario}
+              disabled={mutation.isPending || isLoading}
+            >
+              {mutation.isPending ? "Saving…" : "Save Scenario"}
+            </button>
+          )}
+          {isAdmin && (window as unknown as { AASOVTOOL_BOOTSTRAP?: { addTokenUrl?: string } }).AASOVTOOL_BOOTSTRAP?.addTokenUrl && (
+            <a
+              className="btn btn-sm btn-outline-info"
+              href={(window as unknown as { AASOVTOOL_BOOTSTRAP: { addTokenUrl: string } }).AASOVTOOL_BOOTSTRAP.addTokenUrl}
+            >
+              Add Corp Token
+            </a>
+          )}
+          <select
+            value={systemColorMode}
+            onChange={(e) => setSystemColorMode(e.target.value)}
+            className="form-select form-select-sm"
+            style={{ width: "auto" }}
+            title="System color"
+          >
+            <option value="none">Gradient</option>
+            <option value="trueSec">True Sec</option>
+            <option value="workforce">Workforce</option>
+            <option value="power">Power</option>
+            <option value="superionicIce">Superionic Ice</option>
+            <option value="magmaticGas">Magmatic Gas</option>
+          </select>
           <button
             type="button"
-            className="pointer-events-auto rounded-md border border-[#f74b68] bg-[#120d1e]/90 px-3 py-1.5 text-xs font-semibold text-[#f74b68] transition hover:bg-[#f74b68] hover:text-[#120d1e] disabled:cursor-not-allowed disabled:opacity-40"
-            onClick={handleSaveScenario}
-            disabled={mutation.isPending || isLoading}
+            className="btn btn-sm btn-outline-light"
+            onClick={() => setIsHistoryOpen((prev) => !prev)}
           >
-            {mutation.isPending ? "Saving…" : "Save Scenario"}
+            {isHistoryOpen ? "Hide History" : `History (${changeHistory.length})`}
           </button>
-        )}
-        {isAdmin && (window as unknown as { AASOVTOOL_BOOTSTRAP?: { addTokenUrl?: string } }).AASOVTOOL_BOOTSTRAP?.addTokenUrl && (
-          <a
-            className="pointer-events-auto rounded-md border border-[#49d7ff] bg-[#120d1e]/90 px-3 py-1.5 text-xs font-semibold text-[#49d7ff] transition hover:bg-[#49d7ff] hover:text-[#0b0a17]"
-            href={(window as unknown as { AASOVTOOL_BOOTSTRAP: { addTokenUrl: string } }).AASOVTOOL_BOOTSTRAP.addTokenUrl}
-          >
-            Add Corp Token
-          </a>
-        )}
-        <select
-          value={systemColorMode}
-          onChange={(e) => setSystemColorMode(e.target.value)}
-          className="pointer-events-auto rounded border border-[#433657] bg-[#130f22]/90 px-2 py-1.5 text-[10px] uppercase tracking-wide text-white"
-          title="System color"
-        >
-          <option value="none">Gradient</option>
-          <option value="trueSec">True Sec</option>
-          <option value="workforce">Workforce</option>
-          <option value="power">Power</option>
-          <option value="superionicIce">Superionic Ice</option>
-          <option value="magmaticGas">Magmatic Gas</option>
-        </select>
-        <button
-          type="button"
-          className="pointer-events-auto rounded border border-[#433657] bg-[#130f22]/90 px-2 py-1.5 text-[10px] uppercase tracking-wide text-[#d7c5f4]"
-          onClick={() => setIsHistoryOpen((prev) => !prev)}
-        >
-          {isHistoryOpen ? "Hide ▲" : `History (${changeHistory.length})`}
-        </button>
-        {canEdit && (
-          <>
-            <button
-              type="button"
-              className="pointer-events-auto rounded border border-[#383250] bg-[#130f22]/90 px-2 py-1.5 text-[10px] uppercase tracking-wide text-[#e4def9]"
-              onClick={downloadBackup}
-            >
-              Backup
-            </button>
-            <button
-              type="button"
-              className="pointer-events-auto rounded border border-[#383250] bg-[#130f22]/90 px-2 py-1.5 text-[10px] uppercase tracking-wide text-[#e4def9]"
-              onClick={triggerBackupUpload}
-            >
-              Restore
-            </button>
-          </>
-        )}
-      </div>
+          {canEdit && (
+            <>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-light"
+                onClick={downloadBackup}
+              >
+                Backup
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-light"
+                onClick={triggerBackupUpload}
+              >
+                Restore
+              </button>
+            </>
+          )}
+        </div>,
+        toolbarTarget,
+      )}
       <input
         ref={layoutInputRef}
         type="file"
