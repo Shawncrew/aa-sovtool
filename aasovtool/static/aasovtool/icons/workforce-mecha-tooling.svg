@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gearGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0ea5e9"/>
+    </linearGradient>
+  </defs>
+  <rect x="12" y="12" width="104" height="104" rx="16" ry="16" fill="#0f172a"/>
+  <g transform="translate(64 64)">
+    <circle r="38" fill="none" stroke="url(#gearGradient)" stroke-width="10"/>
+    <circle r="18" fill="#0f172a" stroke="#38bdf8" stroke-width="6"/>
+    <path d="M0,-52 L0,-42 M0,52 L0,42 M-52,0 L-42,0 M52,0 L42,0" stroke="#38bdf8" stroke-width="8" stroke-linecap="round"/>
+    <path d="M-32,-32 L-22,-22 M32,32 L22,22 M-32,32 L-22,22 M32,-32 L22,-22" stroke="#38bdf8" stroke-width="8" stroke-linecap="round"/>
+  </g>
+</svg>
+
+
+
