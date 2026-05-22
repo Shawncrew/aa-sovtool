@@ -92,6 +92,31 @@ def fetch_corp_structures(token, corporation_id: int) -> list[dict]:
     )
 
 
+def fetch_corp_sov_hub_detail(token, corporation_id: int, structure_id: int) -> dict:
+    """Equinox: GetCorporationsStructuresSovereigntyHubsDetail.
+
+    Returns the live state for a single sov hub owned by ``corporation_id``:
+    installed upgrades (typeId + isOnline + priority), workforce/power
+    consumption, ADM with category breakdown, resource yields, and
+    ansiblex links. We try the documented + likely candidate paths so we
+    work against both the dev preview and the published spec.
+    Requires scope ``esi-corporations.read_structures.v1``.
+    """
+    candidates = (
+        f"/corporations/{corporation_id}/structures/sovereignty_hubs/{structure_id}/",
+        f"/corporations/{corporation_id}/structures/{structure_id}/sovereignty_hub/",
+        f"/corporations/{corporation_id}/sovereignty_hubs/{structure_id}/",
+    )
+    for path in candidates:
+        try:
+            return _get(path, token=token)
+        except requests.HTTPError as err:
+            if err.response.status_code in (404, 400):
+                continue
+            raise
+    return {}
+
+
 def fetch_structure(token, structure_id: int) -> dict:
     """GET /universe/structures/{structure_id}/ — names + locations."""
     return _get(f"/universe/structures/{structure_id}/", token=token)

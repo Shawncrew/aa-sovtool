@@ -71,6 +71,19 @@ export interface SystemNode {
     vulnerableStart?: string | null;
     vulnerableEnd?: string | null;
     isRaidable?: boolean;
+    hub?: {
+      installedUpgrades?: Array<{
+        type_id?: number;
+        typeId?: number;
+        online?: boolean;
+        isOnline?: boolean;
+        priority?: number;
+      }>;
+      workforce?: { used?: number; capacity?: number } | null;
+      power?: { used?: number; capacity?: number } | null;
+      resourceYields?: Record<string, number> | null;
+      ansiblexLinks?: Array<{ system_id?: number; system_name?: string }> | null;
+    } | null;
   } | null;
   corpStructures?: Array<{
     structureId: number;

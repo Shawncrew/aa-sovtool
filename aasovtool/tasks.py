@@ -213,11 +213,61 @@ def refresh_access_lists() -> int:
     return total
 
 
+@shared_task(name="aasovtool.refresh_corp_sov_hubs")
+def refresh_corp_sov_hubs() -> int:
+    """Pull GetCorporationsStructuresSovereigntyHubsDetail for every sov
+    hub owned by a registered CorpToken's corporation, and cache the
+    full payload on :class:`SovStructure.hub_detail`.
+
+    The detail includes installed upgrades, workforce/power consumption,
+    ADM breakdown, resource yields, and ansiblex links — i.e. all the
+    fields the planner cards display about a sov hub.
+    """
+    updated = 0
+    for record in models.CorpToken.objects.filter(is_enabled=True):
+        if not record.esi_token:
+            continue
+        # Limit the query to sov hubs the corp actually owns.
+        hubs = models.SovStructure.objects.filter(
+            corporation_id=record.corporation_id
+        )
+        for hub in hubs:
+            try:
+                detail = esi_client.fetch_corp_sov_hub_detail(
+                    record.esi_token, record.corporation_id, hub.structure_id
+                )
+            except Exception:
+                continue
+            if not detail:
+                continue
+            hub.hub_detail = detail
+            # If the detail surfaces an ADM, prefer that over the public
+            # /sovereignty/systems/ aggregate.
+            adm = detail.get("activity_defense_multiplier")
+            if adm is not None:
+                hub.activity_defense_multiplier = adm
+            breakdown = detail.get("activity_defense_breakdown")
+            if breakdown:
+                hub.activity_defense_breakdown = breakdown
+            hub.last_seen_at = timezone.now()
+            hub.save(
+                update_fields=[
+                    "hub_detail",
+                    "activity_defense_multiplier",
+                    "activity_defense_breakdown",
+                    "last_seen_at",
+                ]
+            )
+            updated += 1
+    return updated
+
+
 @shared_task(name="aasovtool.refresh_all")
 def refresh_all() -> dict:
     """Convenience task that runs all refreshes sequentially."""
     return {
         "sov_structures": refresh_sovereignty_structures(),
         "corp_structures": refresh_corp_structures(),
+        "corp_sov_hubs": refresh_corp_sov_hubs(),
         "access_lists": refresh_access_lists(),
     }

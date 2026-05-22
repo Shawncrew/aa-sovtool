@@ -260,27 +260,52 @@ function SystemNodeCardInner({ data }: NodeProps<SystemNodeData>) {
         </div>
       </div>
       {system.sovereignty && (
-        <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-300">
-          <span className="truncate">
-            {system.sovereignty.structureTypeName || "Sov Hub"}
-            {system.sovereignty.allianceId
-              ? ` · A:${system.sovereignty.allianceId}`
-              : system.sovereignty.corporationId
-              ? ` · C:${system.sovereignty.corporationId}`
-              : ""}
-          </span>
-          <span className="flex items-center gap-1">
-            {typeof system.sovereignty.activityDefenseMultiplier === "number" && (
-              <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-amber-200">
-                ADM {system.sovereignty.activityDefenseMultiplier.toFixed(1)}
-              </span>
-            )}
-            {system.sovereignty.isRaidable && (
-              <span className="rounded bg-rose-900/60 px-1.5 py-0.5 font-semibold uppercase text-[10px] text-rose-200">
-                Raidable
-              </span>
-            )}
-          </span>
+        <div className="mt-1 flex flex-col gap-0.5 text-[11px] text-slate-300">
+          <div className="flex items-center justify-between gap-2">
+            <span className="truncate">
+              {system.sovereignty.structureTypeName || "Sov Hub"}
+              {system.sovereignty.allianceId
+                ? ` · A:${system.sovereignty.allianceId}`
+                : system.sovereignty.corporationId
+                ? ` · C:${system.sovereignty.corporationId}`
+                : ""}
+            </span>
+            <span className="flex items-center gap-1">
+              {typeof system.sovereignty.activityDefenseMultiplier === "number" && (
+                <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-amber-200">
+                  ADM {system.sovereignty.activityDefenseMultiplier.toFixed(1)}
+                </span>
+              )}
+              {system.sovereignty.isRaidable && (
+                <span className="rounded bg-rose-900/60 px-1.5 py-0.5 font-semibold uppercase text-[10px] text-rose-200">
+                  Raidable
+                </span>
+              )}
+            </span>
+          </div>
+          {system.sovereignty.hub && (
+            <div className="flex items-center justify-between gap-2 text-[10px] text-slate-400">
+              {system.sovereignty.hub.workforce && typeof system.sovereignty.hub.workforce.used === "number" && (
+                <span title="Live workforce from ESI">
+                  WF {system.sovereignty.hub.workforce.used.toLocaleString()}
+                  {typeof system.sovereignty.hub.workforce.capacity === "number"
+                    ? ` / ${system.sovereignty.hub.workforce.capacity.toLocaleString()}`
+                    : ""}
+                </span>
+              )}
+              {system.sovereignty.hub.power && typeof system.sovereignty.hub.power.used === "number" && (
+                <span title="Live power from ESI">
+                  PW {system.sovereignty.hub.power.used.toLocaleString()}
+                  {typeof system.sovereignty.hub.power.capacity === "number"
+                    ? ` / ${system.sovereignty.hub.power.capacity.toLocaleString()}`
+                    : ""}
+                </span>
+              )}
+              {system.sovereignty.hub.installedUpgrades && system.sovereignty.hub.installedUpgrades.length > 0 && (
+                <span>{system.sovereignty.hub.installedUpgrades.length} upgrades</span>
+              )}
+            </div>
+          )}
         </div>
       )}
       <div className="mt-3 space-y-2 text-[14px] text-slate-200">

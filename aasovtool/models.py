@@ -207,6 +207,10 @@ class SovStructure(models.Model):
     activity_defense_breakdown = models.JSONField(default=dict, blank=True)
     is_raidable = models.BooleanField(default=False)
     raidable_until = models.DateTimeField(null=True, blank=True)
+    # Live state from /corporations/{corp_id}/structures/sovereignty_hubs/{id}/
+    # — installed upgrades, workforce/power consumption, resource yields,
+    # ansiblex links. Populated when a CorpToken with corp roles is registered.
+    hub_detail = models.JSONField(default=dict, blank=True)
     last_seen_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self) -> str:

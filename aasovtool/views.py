@@ -134,6 +134,7 @@ def _build_scenario_systems(scenario: models.Scenario) -> list[dict]:
         row = _serialize_system(system, overrides.get(system.system_name))
         sov = sov_by_id.get(system.star_id) if system.star_id else None
         if sov:
+            hub_detail = sov.hub_detail or {}
             row["sovereignty"] = {
                 "allianceId": sov.alliance_id,
                 "corporationId": sov.corporation_id,
@@ -147,6 +148,18 @@ def _build_scenario_systems(scenario: models.Scenario) -> list[dict]:
                 if sov.vulnerable_end_time
                 else None,
                 "isRaidable": sov.is_raidable,
+                # Live hub data from GetCorporationsStructuresSovereigntyHubsDetail.
+                # Empty when no CorpToken with read_structures is registered.
+                "hub": {
+                    "installedUpgrades": hub_detail.get("installed_upgrades")
+                    or hub_detail.get("upgrades", []),
+                    "workforce": hub_detail.get("workforce"),
+                    "power": hub_detail.get("power"),
+                    "resourceYields": hub_detail.get("resource_yields")
+                    or hub_detail.get("yields"),
+                    "ansiblexLinks": hub_detail.get("ansiblex_links")
+                    or hub_detail.get("ansiblex_partners"),
+                } if hub_detail else None,
             }
         corp_structs = corp_by_system_id.get(system.star_id, []) if system.star_id else []
         row["corpStructures"] = [
