@@ -433,18 +433,30 @@ def refresh_corp_sov_hubs() -> int:
                     solar_system_id=system_id,
                     corporation_id=record.corporation_id,
                 )
-        hubs = models.SovStructure.objects.filter(structure_id__in=owned_ids)
-        for hub in hubs:
+        hubs = list(models.SovStructure.objects.filter(structure_id__in=owned_ids))
+        print(f"[sovtool] {record.corporation_name}: fetching detail for {len(hubs)} hubs…")
+        import time as _t
+        loop_start = _t.monotonic()
+        for idx, hub in enumerate(hubs, 1):
+            t0 = _t.monotonic()
             try:
                 detail = esi_client.fetch_corp_sov_hub_detail(
                     record.esi_token, record.corporation_id, hub.structure_id
                 )
-            except Exception:
+            except Exception as exc:
+                print(f"[sovtool]   {idx}/{len(hubs)} hub={hub.structure_id} FAILED ({exc})")
                 continue
+            took = _t.monotonic() - t0
             if not detail:
+                print(f"[sovtool]   {idx}/{len(hubs)} hub={hub.structure_id} empty ({took:.2f}s)")
                 continue
             refreshed_ids.add(hub.structure_id)
             hub.hub_detail = detail
+            if idx == 1 or idx % 10 == 0:
+                print(
+                    f"[sovtool]   {idx}/{len(hubs)} hub={hub.structure_id} ok ({took:.2f}s, "
+                    f"keys={len(detail)})"
+                )
             # If the detail surfaces an ADM, prefer that over the public
             # /sovereignty/systems/ aggregate.
             adm = detail.get("activity_defense_multiplier")
