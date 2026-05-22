@@ -88,11 +88,15 @@ def _headers(token=None) -> dict[str, str]:
 
 
 def _compat_date() -> str:
+    # CCP pins this to a single allowed value per endpoint contract.
+    # As of the Equinox sov-hub listing spec the only accepted value is
+    # 2026-05-19. Override via AASOVTOOL_ESI_COMPAT_DATE if CCP rolls
+    # a newer contract date.
     try:
         from django.conf import settings as _s
-        return getattr(_s, "AASOVTOOL_ESI_COMPAT_DATE", "2026-05-22")
+        return getattr(_s, "AASOVTOOL_ESI_COMPAT_DATE", "2026-05-19")
     except Exception:
-        return "2026-05-22"
+        return "2026-05-19"
 
 
 def _get(path: str, *, token=None, params: dict | None = None, base: str | None = None) -> Any:
