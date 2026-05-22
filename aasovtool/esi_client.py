@@ -71,11 +71,28 @@ def _maybe_wait_for_budget() -> None:
 
 
 def _headers(token=None) -> dict[str, str]:
-    headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
+    headers = {
+        "User-Agent": USER_AGENT,
+        "Accept": "application/json",
+        # CCP's new ESI (Equinox endpoints) pins responses via a
+        # compatibility-date header. Without it the host returns 404 for
+        # un-versioned paths. Update this when CCP publishes a newer
+        # contract date; the value pins the response schema we coded
+        # against. Override via the AASOVTOOL_ESI_COMPAT_DATE setting.
+        "X-Compatibility-Date": _compat_date(),
+    }
     if token is not None:
         # django-esi's Token has .valid_access_token() which refreshes if needed
         headers["Authorization"] = f"Bearer {token.valid_access_token()}"
     return headers
+
+
+def _compat_date() -> str:
+    try:
+        from django.conf import settings as _s
+        return getattr(_s, "AASOVTOOL_ESI_COMPAT_DATE", "2026-05-22")
+    except Exception:
+        return "2026-05-22"
 
 
 def _get(path: str, *, token=None, params: dict | None = None, base: str | None = None) -> Any:
