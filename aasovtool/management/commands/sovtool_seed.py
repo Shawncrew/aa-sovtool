@@ -51,6 +51,7 @@ class Command(BaseCommand):
 
             self._seed_systems(systems_path, connections_path)
             self._seed_upgrades(upgrades_path)
+            self._seed_default_scenario(data / "scenarios" / "default.json")
 
         ensure_default_groups()
         self.stdout.write(self.style.SUCCESS("Seed complete."))
@@ -106,6 +107,70 @@ class Command(BaseCommand):
         self.stdout.write(
             f"Systems: {created} created, {updated} updated (neighbors for "
             f"{len(neighbors)} systems)."
+        )
+
+    def _seed_default_scenario(self, scenario_path: Path) -> None:
+        """Import the bundled default scenario.
+
+        Source layout (legacy sovtool):
+            {
+              "name": "default",
+              "systemOverrides": {
+                "SYSTEM-A": {"position": {"x":..., "y":...}, "upgrades": [...], ...}
+              }
+            }
+
+        We seed the position overrides so the map opens with the same card
+        layout as the upstream tool — this is the one-time positioning the
+        user can later tweak (edit perm) and save.
+        """
+        if not scenario_path.exists():
+            self.stderr.write(
+                self.style.WARNING(
+                    f"Missing default scenario at {scenario_path}, skipping."
+                )
+            )
+            return
+        with scenario_path.open("r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        overrides = payload.get("systemOverrides", {}) or {}
+        if not overrides:
+            return
+
+        scenario, _ = models.Scenario.objects.get_or_create(
+            name=payload.get("name", "default"),
+            defaults={"is_default": True, "description": payload.get("description")},
+        )
+
+        # Don't clobber overrides edited via the UI: only create a row when
+        # one does not already exist for that system.
+        existing = set(
+            models.SystemOverride.objects.filter(scenario=scenario).values_list(
+                "system_name", flat=True
+            )
+        )
+        created = 0
+        catalog_names = set(
+            models.System.objects.values_list("system_name", flat=True)
+        )
+        for system_name, override in overrides.items():
+            if system_name in existing:
+                continue
+            if system_name not in catalog_names:
+                continue
+            models.SystemOverride.objects.create(
+                scenario=scenario,
+                system_name=system_name,
+                role=override.get("role"),
+                upgrades=override.get("upgrades") or [],
+                transfers=override.get("transfers") or [],
+                position=override.get("position"),
+                ansiblex_partner=override.get("ansiblexPartner"),
+            )
+            created += 1
+        self.stdout.write(
+            f"Default scenario: {created} override rows seeded "
+            f"({len(existing)} preserved)."
         )
 
     def _seed_upgrades(self, upgrades_path: Path):

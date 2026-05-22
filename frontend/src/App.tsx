@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 
 import { SovereigntyGraph } from "./components/SovereigntyGraph";
-import { LanguageSelector } from "./components/LanguageSelector";
 import { useI18n } from "./i18n/context";
 import type {
   ScenarioResponse,
@@ -974,7 +973,6 @@ function App() {
   // simply consumes the session cookie set by the AA backend.
   const loginContent = (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#05050b] via-[#10162b] to-[#1e0f21] px-4 text-[#f5f1ff]">
-      <LanguageSelector />
       <div className="w-full max-w-sm rounded-lg border border-[#342d46] bg-[#100f1f] p-8 text-center shadow-[0_18px_45px_rgba(7,6,15,0.55)]">
         <h1 className="text-2xl font-semibold text-[#f9f7ff]">Sovereignty Planner</h1>
         <p className="mt-2 text-sm text-[#b9b1d6]">
@@ -2089,96 +2087,67 @@ function App() {
 
   return (
     <div className="flex h-screen flex-col bg-gradient-to-br from-[#06060d] via-[#0d101f] to-[#1b0f1b] text-[#f2ecff]">
-      <header className="border-b border-[#2f2942] bg-gradient-to-r from-[#08070f] via-[#120e1f] to-[#251227] px-3 py-3 sm:px-6 sm:py-4 shadow-[0_10px_30px_rgba(5,4,12,0.6)]">
-        <div className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <img
-              src="/ncdot-logo.png"
-              alt="NCdot emblem"
-              className="h-12 w-auto sm:h-16 drop-shadow-[0_12px_24px_rgba(0,0,0,0.45)]"
-            />
-            <div>
-              <h1 className="text-lg sm:text-xl md:text-2xl font-semibold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[#f7f5ff]">
-                NC Sovereignty Planner
-        </h1>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 sm:gap-3">
-            <div className="flex items-center gap-1.5 sm:gap-2 rounded border border-[#3b3250] bg-[#120f1f] px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-[#e8e2ff]">
-              <span className="rounded bg-[#261e34] px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-[11px] uppercase tracking-wide text-[#ef6a87]">
-                {authState.role.toUpperCase()}
-              </span>
-              <span className="truncate max-w-[100px] sm:max-w-none">{authState.username}</span>
-            </div>
-            {isAdmin && (
-              <button
-                type="button"
-                className="rounded-md border border-[#49d7ff] px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-[#49d7ff] transition hover:bg-[#49d7ff] hover:text-[#0b0a17] disabled:opacity-50"
-                onClick={() => {
-                  setUserManagerMessage(null);
-                  setIsUserManagerOpen(true);
-                }}
-              >
-                <span className="hidden sm:inline">{t.manageUsers}</span>
-                <span className="sm:hidden">Users</span>
-              </button>
-            )}
+      {/* Compact floating toolbar — banner, manage-users, language and
+          logout are intentionally omitted; authentication, users, and
+          permissions are now handled in Alliance Auth. */}
+      <div className="pointer-events-none absolute right-3 top-3 z-40 flex flex-wrap items-center justify-end gap-2">
+        {canEdit && (
+          <button
+            type="button"
+            className="pointer-events-auto rounded-md border border-[#f74b68] bg-[#120d1e]/90 px-3 py-1.5 text-xs font-semibold text-[#f74b68] transition hover:bg-[#f74b68] hover:text-[#120d1e] disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={handleSaveScenario}
+            disabled={mutation.isPending || isLoading}
+          >
+            {mutation.isPending ? "Saving…" : "Save Scenario"}
+          </button>
+        )}
+        {isAdmin && (window as unknown as { AASOVTOOL_BOOTSTRAP?: { addTokenUrl?: string } }).AASOVTOOL_BOOTSTRAP?.addTokenUrl && (
+          <a
+            className="pointer-events-auto rounded-md border border-[#49d7ff] bg-[#120d1e]/90 px-3 py-1.5 text-xs font-semibold text-[#49d7ff] transition hover:bg-[#49d7ff] hover:text-[#0b0a17]"
+            href={(window as unknown as { AASOVTOOL_BOOTSTRAP: { addTokenUrl: string } }).AASOVTOOL_BOOTSTRAP.addTokenUrl}
+          >
+            Add Corp Token
+          </a>
+        )}
+        <select
+          value={systemColorMode}
+          onChange={(e) => setSystemColorMode(e.target.value)}
+          className="pointer-events-auto rounded border border-[#433657] bg-[#130f22]/90 px-2 py-1.5 text-[10px] uppercase tracking-wide text-white"
+          title="System color"
+        >
+          <option value="none">Gradient</option>
+          <option value="trueSec">True Sec</option>
+          <option value="workforce">Workforce</option>
+          <option value="power">Power</option>
+          <option value="superionicIce">Superionic Ice</option>
+          <option value="magmaticGas">Magmatic Gas</option>
+        </select>
+        <button
+          type="button"
+          className="pointer-events-auto rounded border border-[#433657] bg-[#130f22]/90 px-2 py-1.5 text-[10px] uppercase tracking-wide text-[#d7c5f4]"
+          onClick={() => setIsHistoryOpen((prev) => !prev)}
+        >
+          {isHistoryOpen ? "Hide ▲" : `History (${changeHistory.length})`}
+        </button>
+        {canEdit && (
+          <>
             <button
               type="button"
-              className="rounded-md border border-[#f74b68] px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-[#f74b68] transition hover:bg-[#f74b68] hover:text-[#120d1e] disabled:cursor-not-allowed disabled:opacity-40"
-              onClick={handleSaveScenario}
-              disabled={!canEdit || mutation.isPending || isLoading}
-            >
-              {mutation.isPending ? t.saving : t.saveScenario}
-            </button>
-            <button
-              type="button"
-              className="rounded-md border border-[#383250] px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-[#e4def9] transition hover:bg-[#2a233c]"
+              className="pointer-events-auto rounded border border-[#383250] bg-[#130f22]/90 px-2 py-1.5 text-[10px] uppercase tracking-wide text-[#e4def9]"
               onClick={downloadBackup}
             >
-              <span className="hidden sm:inline">{t.downloadBackup}</span>
-              <span className="sm:hidden">Backup</span>
+              Backup
             </button>
             <button
               type="button"
-              className="rounded-md border border-[#383250] px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-[#e4def9] transition hover:bg-[#2a233c] disabled:cursor-not-allowed disabled:opacity-40"
+              className="pointer-events-auto rounded border border-[#383250] bg-[#130f22]/90 px-2 py-1.5 text-[10px] uppercase tracking-wide text-[#e4def9]"
               onClick={triggerBackupUpload}
-              disabled={!canEdit}
             >
-              <span className="hidden sm:inline">{t.restoreBackup}</span>
-              <span className="sm:hidden">Restore</span>
+              Restore
             </button>
-            <select
-              value={systemColorMode}
-              onChange={(e) => setSystemColorMode(e.target.value)}
-              className="rounded border border-[#433657] bg-[#130f22] px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs uppercase tracking-wide text-white transition hover:bg-[#3b2f4f] hover:text-[#0b0913] focus:outline-none focus:ring-2 focus:ring-[#433657] [&>option]:bg-[#130f22] [&>option]:text-white"
-              title={t.systemColor}
-            >
-              <option value="none">{t.systemColorGradient}</option>
-              <option value="trueSec">{t.systemColorTrueSec}</option>
-              <option value="workforce">{t.systemColorWorkforce}</option>
-              <option value="power">{t.systemColorPower}</option>
-              <option value="superionicIce">{t.systemColorSuperionicIce}</option>
-              <option value="magmaticGas">{t.systemColorMagmaticGas}</option>
-            </select>
-            <button
-              type="button"
-              className="rounded border border-[#433657] px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs uppercase tracking-wide text-[#d7c5f4] transition hover:bg-[#3b2f4f] hover:text-[#0b0913]"
-              onClick={() => setIsHistoryOpen((prev) => !prev)}
-            >
-              <span className="hidden sm:inline">{isHistoryOpen ? `${t.hideHistory} ▲` : `${t.showHistory} ▼ (${changeHistory.length})`}</span>
-              <span className="sm:hidden">{isHistoryOpen ? "Hide ▲" : `History (${changeHistory.length})`}</span>
-            </button>
-            <button
-              type="button"
-              className="rounded border border-[#433657] px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs uppercase tracking-wide text-[#d7c5f4] transition hover:bg-[#3b2f4f] hover:text-[#0b0913]"
-              onClick={handleLogout}
-            >
-              {t.logout}
-            </button>
-          </div>
-        </div>
-      </header>
+          </>
+        )}
+      </div>
       <input
         ref={layoutInputRef}
         type="file"
@@ -2229,147 +2198,6 @@ function App() {
                 })}
               </ul>
             )}
-          </div>
-        </div>
-      )}
-      {isUserManagerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4">
-          <div className="w-full max-w-3xl rounded-lg border border-slate-800 bg-slate-900 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-100">{t.userManagement}</h2>
-                <p className="text-xs text-slate-400">
-                  {t.createAndManageAccounts}
-                </p>
-              </div>
-              <button
-                type="button"
-                className="rounded border border-slate-600 px-3 py-1 text-xs uppercase tracking-wide text-slate-300 transition hover:bg-slate-600 hover:text-slate-900"
-                onClick={() => {
-                  setIsUserManagerOpen(false);
-                  setUserManagerMessage(null);
-                }}
-              >
-                {t.close}
-              </button>
-            </div>
-            {userManagerMessage && (
-              <div className="border-b border-slate-800 bg-slate-950 px-5 py-3 text-sm text-slate-200">
-                {userManagerMessage}
-              </div>
-            )}
-            <div className="max-h-72 overflow-y-auto px-5 py-4">
-              {isFetchingUsers ? (
-                <div className="flex items-center justify-center py-8 text-slate-400">
-                  Loading users…
-                </div>
-              ) : managedUsers.length === 0 ? (
-                <p className="text-sm text-slate-400">No users found.</p>
-              ) : (
-                <ul className="space-y-3">
-                  {managedUsers.map((user) => {
-                    const roleDraft = userRoleDrafts[user.username] ?? user.role;
-                    const roleChanged = roleDraft !== user.role;
-                    return (
-                      <li
-                        key={user.username}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded border border-slate-800 bg-slate-950 px-4 py-3"
-                      >
-                        <div>
-                          <p className="text-sm font-semibold text-slate-100">{user.username}</p>
-                          <p className="text-[11px] uppercase tracking-wide text-slate-500">
-                            {user.role.toUpperCase()}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <select
-                            className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sov-blue focus:outline-none"
-                            value={roleDraft}
-                            onChange={(event) =>
-                              setUserRoleDrafts((previous) => ({
-                                ...previous,
-                                [user.username]: event.target.value as UserRole,
-                              }))
-                            }
-                            disabled={isUserOperationPending}
-                          >
-                            <option value="admin">admin</option>
-                            <option value="edit">edit</option>
-                            <option value="view">view</option>
-                          </select>
-                          <button
-                            type="button"
-                            className="rounded border border-sov-blue px-3 py-1.5 text-xs uppercase tracking-wide text-sov-blue transition hover:bg-sov-blue hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
-                            disabled={isUserOperationPending || !roleChanged}
-                            onClick={() => handleUpdateUserRole(user.username)}
-                          >
-                            Save Role
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded border border-amber-500 px-3 py-1.5 text-xs uppercase tracking-wide text-amber-300 transition hover:bg-amber-500 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
-                            disabled={isUserOperationPending}
-                            onClick={() => handleResetUserPassword(user.username)}
-                          >
-                            Reset Password
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded border border-rose-500 px-3 py-1.5 text-xs uppercase tracking-wide text-rose-300 transition hover:bg-rose-500 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
-                            disabled={isUserOperationPending || user.username === authState.username}
-                            onClick={() => handleDeleteUserAccount(user.username)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-            <form className="border-t border-slate-800 bg-slate-950 px-5 py-4" onSubmit={handleCreateUser}>
-              <h3 className="text-sm font-semibold text-slate-200">{t.newUser}</h3>
-              <div className="mt-3 grid gap-3 md:grid-cols-3">
-                <input
-                  type="text"
-                  className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sov-blue focus:outline-none"
-                  placeholder="Username"
-                  value={newUserUsername}
-                  onChange={(event) => setNewUserUsername(event.target.value)}
-                  disabled={isUserOperationPending}
-                  required
-                />
-                <input
-                  type="password"
-                  className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sov-blue focus:outline-none"
-                  placeholder="Password (min 8 chars)"
-                  value={newUserPassword}
-                  onChange={(event) => setNewUserPassword(event.target.value)}
-                  disabled={isUserOperationPending}
-                  required
-                />
-                <select
-                  className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sov-blue focus:outline-none"
-                  value={newUserRole}
-                  onChange={(event) => setNewUserRole(event.target.value as UserRole)}
-                  disabled={isUserOperationPending}
-                >
-                  <option value="view">view</option>
-                  <option value="edit">edit</option>
-                  <option value="admin">admin</option>
-                </select>
-              </div>
-              <div className="mt-4 flex justify-end">
-                <button
-                  type="submit"
-                  className="rounded border border-emerald-500 px-4 py-2 text-sm text-emerald-300 transition hover:bg-emerald-500 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
-                  disabled={isUserOperationPending}
-                >
-                  {t.addUser}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
@@ -2853,7 +2681,6 @@ function App() {
           </div>
         </aside>
       </main>
-      <LanguageSelector />
     </div>
   );
 }

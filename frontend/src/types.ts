@@ -62,6 +62,22 @@ export interface SystemNode {
   baseSuperionicIcePerHour?: number;
   baseMagmaticGasPerHour?: number;
   ansiblexPartner?: string | null;
+  sovereignty?: {
+    allianceId?: number | null;
+    corporationId?: number | null;
+    structureTypeName?: string;
+    activityDefenseMultiplier?: number | null;
+    activityDefenseBreakdown?: Record<string, number>;
+    vulnerableStart?: string | null;
+    vulnerableEnd?: string | null;
+    isRaidable?: boolean;
+  } | null;
+  corpStructures?: Array<{
+    structureId: number;
+    typeName: string;
+    state: string;
+    fuelExpires?: string | null;
+  }>;
 }
 
 export interface UpgradeDefinition {

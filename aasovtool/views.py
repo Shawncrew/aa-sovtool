@@ -123,8 +123,42 @@ def _build_scenario_systems(scenario: models.Scenario) -> list[dict]:
     qs = models.System.objects.all()
     if region_filter:
         qs = qs.filter(region_name__iregex=r"^(%s)$" % "|".join(region_filter))
+    # Index live ESI sovereignty data by solar_system_id for an O(1) merge.
+    sov_by_id = {
+        s.solar_system_id: s for s in models.SovStructure.objects.all()
+    }
+    corp_by_system_id: dict[int, list[models.CorpStructure]] = {}
+    for cs in models.CorpStructure.objects.all():
+        corp_by_system_id.setdefault(cs.system_id, []).append(cs)
     for system in qs:
-        out.append(_serialize_system(system, overrides.get(system.system_name)))
+        row = _serialize_system(system, overrides.get(system.system_name))
+        sov = sov_by_id.get(system.star_id) if system.star_id else None
+        if sov:
+            row["sovereignty"] = {
+                "allianceId": sov.alliance_id,
+                "corporationId": sov.corporation_id,
+                "structureTypeName": sov.structure_type_name,
+                "activityDefenseMultiplier": sov.activity_defense_multiplier,
+                "activityDefenseBreakdown": sov.activity_defense_breakdown,
+                "vulnerableStart": sov.vulnerable_start_time.isoformat()
+                if sov.vulnerable_start_time
+                else None,
+                "vulnerableEnd": sov.vulnerable_end_time.isoformat()
+                if sov.vulnerable_end_time
+                else None,
+                "isRaidable": sov.is_raidable,
+            }
+        corp_structs = corp_by_system_id.get(system.star_id, []) if system.star_id else []
+        row["corpStructures"] = [
+            {
+                "structureId": cs.structure_id,
+                "typeName": cs.type_name,
+                "state": cs.state,
+                "fuelExpires": cs.fuel_expires.isoformat() if cs.fuel_expires else None,
+            }
+            for cs in corp_structs
+        ]
+        out.append(row)
     return out
 
 

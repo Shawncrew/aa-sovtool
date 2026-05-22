@@ -1,0 +1,1746 @@
+{
+  "name": "default",
+  "description": null,
+  "created_at": "2025-11-13T05:28:18.188333+00:00",
+  "updated_at": "2025-12-15T02:24:16.580595+00:00",
+  "systemOverrides": {
+    "KQK1-2": {
+      "position": {
+        "x": 5560.0,
+        "y": -520.0
+      }
+    },
+    "O-BY0Y": {
+      "upgrades": [
+        {
+          "typeId": 82498,
+          "upgradeName": "Major Threat Detection Array 3",
+          "power": 1300,
+          "workforce": 7300,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 5880.0,
+        "y": -520.0
+      }
+    },
+    "2D-0SO": {
+      "upgrades": [
+        {
+          "typeId": 82498,
+          "upgradeName": "Major Threat Detection Array 3",
+          "power": 1300,
+          "workforce": 7300,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 6280.0,
+        "y": -360.0
+      }
+    },
+    "UR-E6D": {
+      "upgrades": [
+        {
+          "typeId": 81621,
+          "upgradeName": "Advanced Logistics Network",
+          "power": 500,
+          "workforce": 18100,
+          "superionicIcePerHour": 25,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 5880.0,
+        "y": -240.0
+      }
+    },
+    "X47L-Q": {
+      "position": {
+        "x": 5560.0,
+        "y": -240.0
+      }
+    },
+    "D7T-C0": {
+      "upgrades": [
+        {
+          "typeId": 91006,
+          "upgradeName": "Power Monitoring Division 3",
+          "power": -1000,
+          "workforce": 25000,
+          "superionicIcePerHour": 42,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82498,
+          "upgradeName": "Major Threat Detection Array 3",
+          "power": 1300,
+          "workforce": 7300,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 7080.0,
+        "y": -360.0
+      }
+    },
+    "KI-TL0": {
+      "position": {
+        "x": 7400.0,
+        "y": -360.0
+      }
+    },
+    "EL8-4Q": {
+      "position": {
+        "x": 7720.0,
+        "y": -360.0
+      }
+    },
+    "JC-YX8": {
+      "position": {
+        "x": 7720.0,
+        "y": -640.0
+      }
+    },
+    "5-9WNU": {
+      "position": {
+        "x": 7720.0,
+        "y": -80.0
+      }
+    },
+    "XI-VUF": {
+      "position": {
+        "x": 7400.0,
+        "y": -640.0
+      }
+    },
+    "N-H32Y": {
+      "position": {
+        "x": 8040.0,
+        "y": -360.0
+      }
+    },
+    "12YA-2": {
+      "position": {
+        "x": 7720.0,
+        "y": 200.0
+      }
+    },
+    "BDV3-T": {
+      "position": {
+        "x": 8240.0,
+        "y": 200.0
+      }
+    },
+    "EC-P8R": {
+      "upgrades": [
+        {
+          "typeId": 82498,
+          "upgradeName": "Major Threat Detection Array 3",
+          "power": 1300,
+          "workforce": 7300,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82499,
+          "upgradeName": "Minor Threat Detection Array 1",
+          "power": 200,
+          "workforce": 1800,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": false
+        }
+      ],
+      "position": {
+        "x": 6400.0,
+        "y": 2040.0
+      }
+    },
+    "EWOK-K": {
+      "upgrades": [
+        {
+          "typeId": 91004,
+          "upgradeName": "Power Monitoring Division 1",
+          "power": -200,
+          "workforce": 2500,
+          "superionicIcePerHour": 8,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82498,
+          "upgradeName": "Major Threat Detection Array 3",
+          "power": 1300,
+          "workforce": 7300,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 6400.0,
+        "y": 1760.0
+      }
+    },
+    "O-N8XZ": {
+      "upgrades": [
+        {
+          "typeId": 82498,
+          "upgradeName": "Major Threat Detection Array 3",
+          "power": 1300,
+          "workforce": 7300,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82492,
+          "upgradeName": "Minor Threat Detection Array 3",
+          "power": 700,
+          "workforce": 5400,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 6400.0,
+        "y": 1480.0
+      }
+    },
+    "G-M4I8": {
+      "upgrades": [
+        {
+          "typeId": 91002,
+          "upgradeName": "Workforce Mecha-Tooling 2",
+          "power": 500,
+          "workforce": -10000,
+          "superionicIcePerHour": 25,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82496,
+          "upgradeName": "Major Threat Detection Array 1",
+          "power": 400,
+          "workforce": 2700,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82500,
+          "upgradeName": "Minor Threat Detection Array 2",
+          "power": 500,
+          "workforce": 3800,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 6840.0,
+        "y": 1880.0
+      }
+    },
+    "MI6O-6": {
+      "role": "import",
+      "upgrades": [
+        {
+          "typeId": 91005,
+          "upgradeName": "Power Monitoring Division 2",
+          "power": -500,
+          "workforce": 10000,
+          "superionicIcePerHour": 25,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 87708,
+          "upgradeName": "Zydrine Prospecting Array 3",
+          "power": 1800,
+          "workforce": 18100,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82499,
+          "upgradeName": "Minor Threat Detection Array 1",
+          "power": 200,
+          "workforce": 1800,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 6080.0,
+        "y": 1480.0
+      }
+    },
+    "L-TS8S": {
+      "role": "export",
+      "upgrades": [
+        {
+          "typeId": 82499,
+          "upgradeName": "Minor Threat Detection Array 1",
+          "power": 200,
+          "workforce": 1800,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82496,
+          "upgradeName": "Major Threat Detection Array 1",
+          "power": 400,
+          "workforce": 2700,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "transfers": [
+        {
+          "sourceSystemId": "L-TS8S",
+          "targetSystemId": "MI6O-6",
+          "amount": 25000,
+          "viaSystems": [
+            "O-N8XZ"
+          ],
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 6400.0,
+        "y": 1120.0
+      }
+    },
+    "93PI-4": {
+      "upgrades": [
+        {
+          "typeId": 82498,
+          "upgradeName": "Major Threat Detection Array 3",
+          "power": 1300,
+          "workforce": 7300,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82499,
+          "upgradeName": "Minor Threat Detection Array 1",
+          "power": 200,
+          "workforce": 1800,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 6840.0,
+        "y": 2160.0
+      }
+    },
+    "ION-FG": {
+      "upgrades": [
+        {
+          "typeId": 82492,
+          "upgradeName": "Minor Threat Detection Array 3",
+          "power": 700,
+          "workforce": 5400,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82498,
+          "upgradeName": "Major Threat Detection Array 3",
+          "power": 1300,
+          "workforce": 7300,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 8240.0,
+        "y": -720.0
+      }
+    },
+    "C-H9X7": {
+      "upgrades": [
+        {
+          "typeId": 82492,
+          "upgradeName": "Minor Threat Detection Array 3",
+          "power": 700,
+          "workforce": 5400,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82498,
+          "upgradeName": "Major Threat Detection Array 3",
+          "power": 1300,
+          "workforce": 7300,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 8240.0,
+        "y": -1000.0
+      }
+    },
+    "A8I-C5": {
+      "role": "export",
+      "upgrades": [
+        {
+          "typeId": 82497,
+          "upgradeName": "Major Threat Detection Array 2",
+          "power": 900,
+          "workforce": 5400,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82500,
+          "upgradeName": "Minor Threat Detection Array 2",
+          "power": 500,
+          "workforce": 3800,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 91005,
+          "upgradeName": "Power Monitoring Division 2",
+          "power": -500,
+          "workforce": 10000,
+          "superionicIcePerHour": 25,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "transfers": [
+        {
+          "sourceSystemId": "A8I-C5",
+          "targetSystemId": "ZJET-E",
+          "amount": 1000,
+          "viaSystems": [
+            "DK-FXK"
+          ],
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 7920.0,
+        "y": -1000.0
+      }
+    },
+    "DK-FXK": {
+      "upgrades": [
+        {
+          "typeId": 82497,
+          "upgradeName": "Major Threat Detection Array 2",
+          "power": 900,
+          "workforce": 5400,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82499,
+          "upgradeName": "Minor Threat Detection Array 1",
+          "power": 200,
+          "workforce": 1800,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 91002,
+          "upgradeName": "Workforce Mecha-Tooling 2",
+          "power": 500,
+          "workforce": -10000,
+          "superionicIcePerHour": 25,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 92001,
+          "upgradeName": "Exploration Detector 1",
+          "power": 400,
+          "workforce": 4000,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 7760.0,
+        "y": -1480.0
+      }
+    },
+    "M-76XI": {
+      "role": "import",
+      "upgrades": [
+        {
+          "typeId": 87704,
+          "upgradeName": "Pyerite Prospecting Array 3",
+          "power": 1800,
+          "workforce": 18100,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82496,
+          "upgradeName": "Major Threat Detection Array 1",
+          "power": 400,
+          "workforce": 2700,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82499,
+          "upgradeName": "Minor Threat Detection Array 1",
+          "power": 200,
+          "workforce": 1800,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 8240.0,
+        "y": -1360.0
+      }
+    },
+    "ZJET-E": {
+      "role": "import",
+      "upgrades": [
+        {
+          "typeId": 82499,
+          "upgradeName": "Minor Threat Detection Array 1",
+          "power": 200,
+          "workforce": 1800,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 87702,
+          "upgradeName": "Tritanium Prospecting Array 3",
+          "power": 1800,
+          "workforce": 18100,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 8240.0,
+        "y": -1640.0
+      }
+    },
+    "U-INPD": {
+      "role": "export",
+      "upgrades": [
+        {
+          "typeId": 91002,
+          "upgradeName": "Workforce Mecha-Tooling 2",
+          "power": 500,
+          "workforce": -10000,
+          "superionicIcePerHour": 25,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82498,
+          "upgradeName": "Major Threat Detection Array 3",
+          "power": 1300,
+          "workforce": 7300,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82492,
+          "upgradeName": "Minor Threat Detection Array 3",
+          "power": 700,
+          "workforce": 5400,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 92001,
+          "upgradeName": "Exploration Detector 1",
+          "power": 400,
+          "workforce": 4000,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "transfers": [
+        {
+          "sourceSystemId": "U-INPD",
+          "targetSystemId": "M-76XI",
+          "amount": 15000,
+          "viaSystems": [
+            "DK-FXK"
+          ],
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 7560.0,
+        "y": -1000.0
+      }
+    },
+    "WW-KGD": {
+      "role": "import",
+      "upgrades": [
+        {
+          "typeId": 82497,
+          "upgradeName": "Major Threat Detection Array 2",
+          "power": 900,
+          "workforce": 5400,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 91005,
+          "upgradeName": "Power Monitoring Division 2",
+          "power": -500,
+          "workforce": 10000,
+          "superionicIcePerHour": 25,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82492,
+          "upgradeName": "Minor Threat Detection Array 3",
+          "power": 700,
+          "workforce": 5400,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 8240.0,
+        "y": 1000.0
+      }
+    },
+    "XQ-PXU": {
+      "upgrades": [
+        {
+          "typeId": 82500,
+          "upgradeName": "Minor Threat Detection Array 2",
+          "power": 550,
+          "workforce": 3850,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82498,
+          "upgradeName": "Major Threat Detection Array 3",
+          "power": 1300,
+          "workforce": 7300,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 8240.0,
+        "y": 1280.0
+      }
+    },
+    "M-YCD4": {
+      "upgrades": [
+        {
+          "typeId": 82497,
+          "upgradeName": "Major Threat Detection Array 2",
+          "power": 900,
+          "workforce": 5400,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 7520.0,
+        "y": 1320.0
+      }
+    },
+    "Q-5211": {
+      "upgrades": [
+        {
+          "typeId": 82499,
+          "upgradeName": "Minor Threat Detection Array 1",
+          "power": 200,
+          "workforce": 1800,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82497,
+          "upgradeName": "Major Threat Detection Array 2",
+          "power": 900,
+          "workforce": 5400,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 91005,
+          "upgradeName": "Power Monitoring Division 2",
+          "power": -500,
+          "workforce": 10000,
+          "superionicIcePerHour": 25,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 92001,
+          "upgradeName": "Exploration Detector 1",
+          "power": 400,
+          "workforce": 4000,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 7880.0,
+        "y": 1600.0
+      }
+    },
+    "R-2R0G": {
+      "upgrades": [
+        {
+          "typeId": 82497,
+          "upgradeName": "Major Threat Detection Array 2",
+          "power": 900,
+          "workforce": 5400,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82499,
+          "upgradeName": "Minor Threat Detection Array 1",
+          "power": 200,
+          "workforce": 1800,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 91005,
+          "upgradeName": "Power Monitoring Division 2",
+          "power": -500,
+          "workforce": 10000,
+          "superionicIcePerHour": 25,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 92001,
+          "upgradeName": "Exploration Detector 1",
+          "power": 400,
+          "workforce": 4000,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 7520.0,
+        "y": 1880.0
+      }
+    },
+    "CR-AQH": {
+      "upgrades": [
+        {
+          "typeId": 82498,
+          "upgradeName": "Major Threat Detection Array 3",
+          "power": 1300,
+          "workforce": 7300,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        },
+        {
+          "typeId": 82500,
+          "upgradeName": "Minor Threat Detection Array 2",
+          "power": 500,
+          "workforce": 3800,
+          "superionicIcePerHour": 0,
+          "magmaticGasPerHour": 0,
+          "priority": 1,
+          "isOnline": true
+        }
+      ],
+      "position": {
+        "x": 8240.0,
+        "y": 1880.0
+      }
+    },
+    "R6XN-9": {
+      "position": {
+        "x": 6400.0,
+        "y": 800.0
+      }
+    },
+    "3V8-LJ": {
+      "position": {
+        "x": 6400.0,
+        "y": 440.0
+      }
+    },
+    "B8EN-S": {
+      "position": {
+        "x": 6080.0,
+        "y": 640.0
+      }
+    },
+    "R-LW2I": {
+      "position": {
+        "x": 6080.0,
+        "y": 360.0
+      }
+    },
+    "DP-1YE": {
+      "position": {
+        "x": 6400.0,
+        "y": 80.0
+      }
+    },
+    "4-ABS8": {
+      "position": {
+        "x": 6080.0,
+        "y": 80.0
+      }
+    },
+    "7RM-N0": {
+      "position": {
+        "x": 4520.0,
+        "y": 480.0
+      }
+    },
+    "S-MDYI": {
+      "position": {
+        "x": 4520.0,
+        "y": 760.0
+      }
+    },
+    "ZKYV-W": {
+      "position": {
+        "x": 4040.0,
+        "y": 760.0
+      }
+    },
+    "F-NMX6": {
+      "position": {
+        "x": 4040.0,
+        "y": 480.0
+      }
+    },
+    "GA-P6C": {
+      "position": {
+        "x": 4520.0,
+        "y": 200.0
+      }
+    },
+    "FWA-4V": {
+      "position": {
+        "x": 4040.0,
+        "y": 1040.0
+      }
+    },
+    "RZC-16": {
+      "position": {
+        "x": 4040.0,
+        "y": 1320.0
+      }
+    },
+    "RD-G2R": {
+      "position": {
+        "x": 5040.0,
+        "y": 1280.0
+      }
+    },
+    "UC3H-Y": {
+      "position": {
+        "x": 5040.0,
+        "y": 1560.0
+      }
+    },
+    "6GWE-A": {
+      "position": {
+        "x": 5400.0,
+        "y": 2200.0
+      }
+    },
+    "J-OK0C": {
+      "position": {
+        "x": 5400.0,
+        "y": 2480.0
+      }
+    },
+    "KDV-DE": {
+      "position": {
+        "x": 5040.0,
+        "y": 2000.0
+      }
+    },
+    "MT9Q-S": {
+      "position": {
+        "x": 4680.0,
+        "y": 2200.0
+      }
+    },
+    "B-9C24": {
+      "position": {
+        "x": 3520.0,
+        "y": 480.0
+      }
+    },
+    "P-2TTL": {
+      "position": {
+        "x": 3200.0,
+        "y": 480.0
+      }
+    },
+    "7X-VKB": {
+      "position": {
+        "x": 3360.0,
+        "y": 120.0
+      }
+    },
+    "E-Z2ZX": {
+      "position": {
+        "x": 2720.0,
+        "y": 480.0
+      }
+    },
+    "RORZ-H": {
+      "position": {
+        "x": 2720.0,
+        "y": 760.0
+      }
+    },
+    "O-A6YN": {
+      "position": {
+        "x": 3200.0,
+        "y": 800.0
+      }
+    },
+    "MQ-NPY": {
+      "position": {
+        "x": 4040.0,
+        "y": 1640.0
+      }
+    },
+    "D2-HOS": {
+      "position": {
+        "x": 4040.0,
+        "y": 1920.0
+      }
+    },
+    "Y2-6EA": {
+      "position": {
+        "x": 4040.0,
+        "y": 2240.0
+      }
+    },
+    "TFA0-U": {
+      "position": {
+        "x": 4440.0,
+        "y": 1920.0
+      }
+    },
+    "RQH-MY": {
+      "position": {
+        "x": 3640.0,
+        "y": 1800.0
+      }
+    },
+    "HPS5-C": {
+      "position": {
+        "x": 3640.0,
+        "y": 2120.0
+      }
+    },
+    "DT-TCD": {
+      "position": {
+        "x": 4040.0,
+        "y": 2560.0
+      }
+    },
+    "KU5R-W": {
+      "position": {
+        "x": 2720.0,
+        "y": 1280.0
+      }
+    },
+    "H1-J33": {
+      "position": {
+        "x": 2720.0,
+        "y": 1560.0
+      }
+    },
+    "Y-C3EQ": {
+      "position": {
+        "x": 2720.0,
+        "y": 1840.0
+      }
+    },
+    "OGV-AS": {
+      "position": {
+        "x": 2720.0,
+        "y": 2120.0
+      }
+    },
+    "7D-0SQ": {
+      "position": {
+        "x": 2400.0,
+        "y": 1840.0
+      }
+    },
+    "UI-8ZE": {
+      "position": {
+        "x": 2720.0,
+        "y": 2400.0
+      }
+    },
+    "4U90-Z": {
+      "position": {
+        "x": 8160.0,
+        "y": -3240.0
+      }
+    },
+    "T-945F": {
+      "position": {
+        "x": 8360.0,
+        "y": -2880.0
+      }
+    },
+    "FO8M-2": {
+      "position": {
+        "x": 7960.0,
+        "y": -2880.0
+      }
+    },
+    "AD-CBT": {
+      "position": {
+        "x": 8160.0,
+        "y": -3520.0
+      }
+    },
+    "QPO-WI": {
+      "position": {
+        "x": 7600.0,
+        "y": -2880.0
+      }
+    },
+    "R8S-1K": {
+      "position": {
+        "x": 8160.0,
+        "y": -2520.0
+      }
+    },
+    "94-H3F": {
+      "position": {
+        "x": 7240.0,
+        "y": -2880.0
+      }
+    },
+    "CU9-T0": {
+      "position": {
+        "x": 6880.0,
+        "y": -3040.0
+      }
+    },
+    "XCF-8N": {
+      "position": {
+        "x": 6880.0,
+        "y": -2720.0
+      }
+    },
+    "FMB-JP": {
+      "position": {
+        "x": 6520.0,
+        "y": -2880.0
+      }
+    },
+    "0P-F3K": {
+      "position": {
+        "x": 6520.0,
+        "y": -2600.0
+      }
+    },
+    "K5F-Z2": {
+      "position": {
+        "x": 6520.0,
+        "y": -2320.0
+      }
+    },
+    "TXME-A": {
+      "position": {
+        "x": 6200.0,
+        "y": -2880.0
+      }
+    },
+    "YA0-XJ": {
+      "position": {
+        "x": 5880.0,
+        "y": -2880.0
+      }
+    },
+    "2-KF56": {
+      "position": {
+        "x": 5200.0,
+        "y": -3240.0
+      }
+    },
+    "VFK-IV": {
+      "position": {
+        "x": 4760.0,
+        "y": -2960.0
+      }
+    },
+    "2R-CRW": {
+      "position": {
+        "x": 5200.0,
+        "y": -2680.0
+      }
+    },
+    "CCP-US": {
+      "position": {
+        "x": 5200.0,
+        "y": -2400.0
+      }
+    },
+    "II-5O9": {
+      "position": {
+        "x": 5200.0,
+        "y": -2960.0
+      }
+    },
+    "I30-3A": {
+      "position": {
+        "x": 4760.0,
+        "y": -2680.0
+      }
+    },
+    "2O9G-D": {
+      "position": {
+        "x": 4440.0,
+        "y": -2680.0
+      }
+    },
+    "NC-N3F": {
+      "position": {
+        "x": 4440.0,
+        "y": -2960.0
+      }
+    },
+    "JU-OWQ": {
+      "position": {
+        "x": 4120.0,
+        "y": -2680.0
+      }
+    },
+    "S-DN5M": {
+      "position": {
+        "x": 4120.0,
+        "y": -2960.0
+      }
+    },
+    "MXX5-9": {
+      "position": {
+        "x": 3800.0,
+        "y": -2680.0
+      }
+    },
+    "ZZZR-5": {
+      "position": {
+        "x": 3800.0,
+        "y": -2960.0
+      }
+    },
+    "C7Y-7Z": {
+      "position": {
+        "x": 5840.0,
+        "y": -3360.0
+      }
+    },
+    "X-Z4DA": {
+      "position": {
+        "x": 6200.0,
+        "y": -3360.0
+      }
+    },
+    "3OAT-Q": {
+      "position": {
+        "x": 6600.0,
+        "y": -3520.0
+      }
+    },
+    "N-TFXK": {
+      "position": {
+        "x": 6920.0,
+        "y": -3520.0
+      }
+    },
+    "33RB-O": {
+      "position": {
+        "x": 6200.0,
+        "y": -3680.0
+      }
+    },
+    "DKUK-G": {
+      "position": {
+        "x": 7240.0,
+        "y": -3520.0
+      }
+    },
+    "3QE-9Q": {
+      "position": {
+        "x": 3320.0,
+        "y": -2680.0
+      }
+    },
+    "E-FIC0": {
+      "position": {
+        "x": 3320.0,
+        "y": -3000.0
+      }
+    },
+    "ZOYW-O": {
+      "position": {
+        "x": 3000.0,
+        "y": -2680.0
+      }
+    },
+    "85-B52": {
+      "position": {
+        "x": 3480.0,
+        "y": -3280.0
+      }
+    },
+    "YZ-UKA": {
+      "position": {
+        "x": 3160.0,
+        "y": -3280.0
+      }
+    },
+    "RO0-AF": {
+      "position": {
+        "x": 2680.0,
+        "y": -2680.0
+      }
+    },
+    "5W3-DG": {
+      "position": {
+        "x": 2360.0,
+        "y": -2680.0
+      }
+    },
+    "LT-DRO": {
+      "position": {
+        "x": 2040.0,
+        "y": -2680.0
+      }
+    },
+    "7T6P-C": {
+      "position": {
+        "x": 2360.0,
+        "y": -2960.0
+      }
+    },
+    "8S28-3": {
+      "position": {
+        "x": 2040.0,
+        "y": -2400.0
+      }
+    },
+    "E3UY-6": {
+      "position": {
+        "x": 1720.0,
+        "y": -2400.0
+      }
+    },
+    "LEK-N5": {
+      "position": {
+        "x": 1360.0,
+        "y": -2400.0
+      }
+    },
+    "AGG-NR": {
+      "position": {
+        "x": 1000.0,
+        "y": -2400.0
+      }
+    },
+    "0V0R-R": {
+      "position": {
+        "x": 1520.0,
+        "y": -2760.0
+      }
+    },
+    "O-2RNZ": {
+      "position": {
+        "x": 640.0,
+        "y": -2400.0
+      }
+    },
+    "OWXT-5": {
+      "position": {
+        "x": 1200.0,
+        "y": -2760.0
+      }
+    },
+    "3JN9-Q": {
+      "position": {
+        "x": 320.0,
+        "y": -2400.0
+      }
+    },
+    "3T7-M8": {
+      "position": {
+        "x": 1200.0,
+        "y": -3120.0
+      }
+    },
+    "WUZ-WM": {
+      "position": {
+        "x": 760.0,
+        "y": -3120.0
+      }
+    },
+    "MZ1E-P": {
+      "position": {
+        "x": 1640.0,
+        "y": -3120.0
+      }
+    },
+    "43B-O1": {
+      "position": {
+        "x": 760.0,
+        "y": -2840.0
+      }
+    },
+    "J1AU-9": {
+      "position": {
+        "x": 1640.0,
+        "y": -3440.0
+      }
+    },
+    "X3-PBC": {
+      "position": {
+        "x": 1640.0,
+        "y": -3760.0
+      }
+    },
+    "4N-BUI": {
+      "position": {
+        "x": 320.0,
+        "y": -3120.0
+      }
+    },
+    "N2IS-B": {
+      "position": {
+        "x": 1200.0,
+        "y": -3680.0
+      }
+    },
+    "XCBK-X": {
+      "position": {
+        "x": -240.0,
+        "y": -3720.0
+      }
+    },
+    "GY5-26": {
+      "position": {
+        "x": -120.0,
+        "y": -3120.0
+      }
+    },
+    "VPLL-N": {
+      "position": {
+        "x": 360.0,
+        "y": -3720.0
+      }
+    },
+    "9CK-KZ": {
+      "position": {
+        "x": 80.0,
+        "y": -4080.0
+      }
+    },
+    "5S-KXA": {
+      "position": {
+        "x": 440.0,
+        "y": -2840.0
+      }
+    },
+    "U-TJ7Y": {
+      "position": {
+        "x": 1640.0,
+        "y": -4080.0
+      }
+    },
+    "A4L-A2": {
+      "position": {
+        "x": 1640.0,
+        "y": -4400.0
+      }
+    },
+    "CZDJ-1": {
+      "position": {
+        "x": 1280.0,
+        "y": -4400.0
+      }
+    },
+    "RG9-7U": {
+      "position": {
+        "x": 880.0,
+        "y": -4560.0
+      }
+    },
+    "UJY-HE": {
+      "position": {
+        "x": 1280.0,
+        "y": -4720.0
+      }
+    },
+    "UEJX-G": {
+      "position": {
+        "x": 2000.0,
+        "y": -4400.0
+      }
+    },
+    "C8-CHY": {
+      "position": {
+        "x": 5040.0,
+        "y": -200.0
+      }
+    },
+    "E-9ORY": {
+      "position": {
+        "x": 5040.0,
+        "y": -480.0
+      }
+    },
+    "CR-IFM": {
+      "position": {
+        "x": 4880.0,
+        "y": -760.0
+      }
+    },
+    "HHK-VL": {
+      "position": {
+        "x": 5200.0,
+        "y": -760.0
+      }
+    },
+    "P-33KR": {
+      "position": {
+        "x": 4880.0,
+        "y": -1040.0
+      }
+    },
+    "DO6H-Q": {
+      "position": {
+        "x": 5200.0,
+        "y": -1040.0
+      }
+    },
+    "DW-T2I": {
+      "position": {
+        "x": 4200.0,
+        "y": -1040.0
+      }
+    },
+    "O-CNPR": {
+      "position": {
+        "x": 3120.0,
+        "y": -1000.0
+      }
+    },
+    "L-SCBU": {
+      "position": {
+        "x": 3120.0,
+        "y": -1280.0
+      }
+    },
+    "VRH-H7": {
+      "position": {
+        "x": 2720.0,
+        "y": -960.0
+      }
+    },
+    "O1Y-ED": {
+      "position": {
+        "x": 2560.0,
+        "y": -1280.0
+      }
+    },
+    "K4YZ-Y": {
+      "position": {
+        "x": 2040.0,
+        "y": -1280.0
+      }
+    },
+    "X36Y-G": {
+      "position": {
+        "x": 2400.0,
+        "y": -960.0
+      }
+    },
+    "L-C3O7": {
+      "position": {
+        "x": 2040.0,
+        "y": -1000.0
+      }
+    },
+    "YKSC-A": {
+      "position": {
+        "x": 2400.0,
+        "y": -560.0
+      }
+    },
+    "FIO1-8": {
+      "position": {
+        "x": 2400.0,
+        "y": -280.0
+      }
+    },
+    "C-OK0R": {
+      "position": {
+        "x": 2080.0,
+        "y": -560.0
+      }
+    },
+    "0-ARFO": {
+      "position": {
+        "x": 1760.0,
+        "y": -560.0
+      }
+    },
+    "E9KD-N": {
+      "position": {
+        "x": 2400.0,
+        "y": 0.0
+      }
+    },
+    "8W-OSE": {
+      "position": {
+        "x": 2080.0,
+        "y": -280.0
+      }
+    },
+    "WQY-IQ": {
+      "position": {
+        "x": 2080.0,
+        "y": 0.0
+      }
+    },
+    "C4C-Z4": {
+      "position": {
+        "x": 1720.0,
+        "y": -1000.0
+      }
+    },
+    "GME-PQ": {
+      "position": {
+        "x": 1440.0,
+        "y": -1000.0
+      }
+    },
+    "MPPA-A": {
+      "position": {
+        "x": 1160.0,
+        "y": -1000.0
+      }
+    },
+    "X5-UME": {
+      "position": {
+        "x": 1440.0,
+        "y": -1320.0
+      }
+    },
+    "I-UUI5": {
+      "position": {
+        "x": 880.0,
+        "y": -1000.0
+      }
+    },
+    "8QMO-E": {
+      "position": {
+        "x": 1280.0,
+        "y": -640.0
+      }
+    },
+    "J-CIJV": {
+      "position": {
+        "x": 5560.0,
+        "y": 480.0
+      }
+    },
+    "X-7OMU": {
+      "position": {
+        "x": 5560.0,
+        "y": 760.0
+      }
+    },
+    "CXN1-Z": {
+      "position": {
+        "x": 5560.0,
+        "y": 1040.0
+      }
+    },
+    "KLY-C0": {
+      "position": {
+        "x": 5040.0,
+        "y": 680.0
+      }
+    },
+    "CL6-ZG": {
+      "position": {
+        "x": 5040.0,
+        "y": 960.0
+      }
+    },
+    "G95-VZ": {
+      "position": {
+        "x": 5040.0,
+        "y": 400.0
+      }
+    },
+    "ROIR-Y": {
+      "position": {
+        "x": 5040.0,
+        "y": 120.0
+      }
+    },
+    "8S-0E1": {
+      "position": {
+        "x": 7120.0,
+        "y": 80.0
+      }
+    },
+    "5ZXX-K": {
+      "position": {
+        "x": 6960.0,
+        "y": 440.0
+      }
+    },
+    "JE-D5U": {
+      "position": {
+        "x": 6960.0,
+        "y": 800.0
+      }
+    },
+    "2-6TGQ": {
+      "position": {
+        "x": 6800.0,
+        "y": 80.0
+      }
+    },
+    "OE-9UF": {
+      "position": {
+        "x": 7120.0,
+        "y": 1120.0
+      }
+    },
+    "PFU-LH": {
+      "position": {
+        "x": 7280.0,
+        "y": 800.0
+      }
+    }
+  }
+}
