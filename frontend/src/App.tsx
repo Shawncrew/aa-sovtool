@@ -2086,10 +2086,12 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-gradient-to-br from-[#06060d] via-[#0d101f] to-[#1b0f1b] text-[#f2ecff]">
+    <div className="relative flex flex-col bg-gradient-to-br from-[#06060d] via-[#0d101f] to-[#1b0f1b] text-[#f2ecff]" style={{ height: "calc(100vh - 120px)" }}>
       {/* Compact floating toolbar — banner, manage-users, language and
           logout are intentionally omitted; authentication, users, and
-          permissions are now handled in Alliance Auth. */}
+          permissions are now handled in Alliance Auth. Positioned
+          absolute within this relative wrapper so it sits inside the
+          planner area (not under AA's top blue bar). */}
       <div className="pointer-events-none absolute right-3 top-3 z-40 flex flex-wrap items-center justify-end gap-2">
         {canEdit && (
           <button
@@ -2229,7 +2231,7 @@ function App() {
             />
           )}
         </section>
-        <aside className="w-full lg:w-[560px] border-t lg:border-t-0 lg:border-l border-[#2f2942] bg-[#100f1f] px-4 sm:px-6 py-4 sm:py-6 overflow-y-auto max-h-[50vh] lg:max-h-none">
+        <aside className="w-full lg:w-[380px] shrink-0 border-t lg:border-t-0 lg:border-l border-[#2f2942] bg-[#100f1f] px-3 sm:px-4 py-3 sm:py-4 overflow-y-auto">
             {statusMessage && (
             <div className="mb-6 rounded border border-[#3a3150] bg-[#120f21] px-4 py-3 text-xs text-[#e4def9]">
               {statusMessage}
