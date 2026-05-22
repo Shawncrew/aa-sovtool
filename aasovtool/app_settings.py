@@ -19,9 +19,11 @@ AASOVTOOL_ESI_SCOPES = [
     "publicData",
     "esi-corporations.read_structures.v1",
     "esi-universe.read_structures.v1",
-    "esi-sovereignty.read_structures.v1",
     "esi-characters.read_corporation_roles.v1",
 ]
+# Note: /sovereignty/* endpoints (campaigns/map/structures/systems) are
+# public and require no scope. Access lists on Equinox structures are
+# reached through esi-corporations.read_structures.v1.
 
 AASOVTOOL_REFRESH_INTERVAL_MINUTES = getattr(
     settings,
