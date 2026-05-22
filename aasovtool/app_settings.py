@@ -17,13 +17,18 @@ AASOVTOOL_DEFAULT_SCENARIO = getattr(
 
 AASOVTOOL_ESI_SCOPES = [
     "publicData",
+    # Legacy scope — needed for /corporations/{id}/structures/ (citadels,
+    # ECs, refineries; the OLD upwell-structures endpoint).
     "esi-corporations.read_structures.v1",
+    # NEW Equinox scope — required by /corporations/{id}/structures/
+    # sovereignty-hubs and the matching detail endpoint. CCP introduced
+    # this as a separate scope from the legacy structures one.
+    "esi-structures.read_corporation.v1",
     "esi-universe.read_structures.v1",
     "esi-characters.read_corporation_roles.v1",
 ]
 # Note: /sovereignty/* endpoints (campaigns/map/structures/systems) are
-# public and require no scope. Access lists on Equinox structures are
-# reached through esi-corporations.read_structures.v1.
+# public and require no scope.
 
 AASOVTOOL_REFRESH_INTERVAL_MINUTES = getattr(
     settings,
