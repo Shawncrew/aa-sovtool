@@ -488,7 +488,42 @@ def refresh_corp_sov_hubs() -> int:
         )
         if cleared:
             print(f"[sovtool] Cleared stale hub_detail on {cleared} rows.")
+
+    # Resolve names for any upgrade type_ids the catalog doesn't know
+    # about yet. Equinox keeps adding new upgrade types and our
+    # bundled upgrades.json only covered the launch set, so the cards
+    # show 'Type 88227' for anything new. Pulling via /universe/names/
+    # gets us the in-game name without needing an updated bundled
+    # catalog. Power/workforce costs stay 0 until manually filled.
+    _resolve_unknown_upgrade_names()
+
     return updated
+
+
+def _resolve_unknown_upgrade_names() -> None:
+    seen_type_ids: set[int] = set()
+    for row in models.SovStructure.objects.exclude(hub_detail={}):
+        for upg in (row.hub_detail.get("upgrades") or []):
+            tid = upg.get("type_id")
+            if tid:
+                seen_type_ids.add(int(tid))
+    if not seen_type_ids:
+        return
+    known = set(
+        models.Upgrade.objects.filter(type_id__in=seen_type_ids).values_list(
+            "type_id", flat=True
+        )
+    )
+    missing = list(seen_type_ids - known)
+    if not missing:
+        return
+    print(f"[sovtool] Resolving {len(missing)} unknown upgrade type_ids via ESI…")
+    name_map = esi_client.resolve_names(missing)
+    for type_id in missing:
+        models.Upgrade.objects.update_or_create(
+            type_id=int(type_id),
+            defaults={"upgrade_name": name_map.get(int(type_id), f"Type {type_id}")},
+        )
 
 
 @shared_task(name="aasovtool.refresh_all")

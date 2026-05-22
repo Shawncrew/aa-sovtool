@@ -281,30 +281,20 @@ function SystemNodeCardInner({ data }: NodeProps<SystemNodeData>) {
           </span>
         </div>
       </div>
-      {system.sovereignty && (
-        <div className="mt-1 flex flex-col gap-0.5 text-[11px] text-slate-300">
-          <div className="flex items-center justify-between gap-2">
-            <span className="truncate">
-              {system.sovereignty.structureTypeName || "Sov Hub"}
-              {system.sovereignty.allianceId
-                ? ` · A:${system.sovereignty.allianceId}`
-                : system.sovereignty.corporationId
-                ? ` · C:${system.sovereignty.corporationId}`
-                : ""}
+      {system.sovereignty &&
+        (typeof system.sovereignty.activityDefenseMultiplier === "number" ||
+          system.sovereignty.isRaidable) && (
+        <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-slate-300">
+          {typeof system.sovereignty.activityDefenseMultiplier === "number" && (
+            <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-amber-200">
+              ADM {system.sovereignty.activityDefenseMultiplier.toFixed(1)}
             </span>
-            <span className="flex items-center gap-1">
-              {typeof system.sovereignty.activityDefenseMultiplier === "number" && (
-                <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-amber-200">
-                  ADM {system.sovereignty.activityDefenseMultiplier.toFixed(1)}
-                </span>
-              )}
-              {system.sovereignty.isRaidable && (
-                <span className="rounded bg-rose-900/60 px-1.5 py-0.5 font-semibold uppercase text-[10px] text-rose-200">
-                  Raidable
-                </span>
-              )}
+          )}
+          {system.sovereignty.isRaidable && (
+            <span className="rounded bg-rose-900/60 px-1.5 py-0.5 font-semibold uppercase text-[10px] text-rose-200">
+              Raidable
             </span>
-          </div>
+          )}
         </div>
       )}
       <div className="mt-3 space-y-2 text-[14px] text-slate-200">

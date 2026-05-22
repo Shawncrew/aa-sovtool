@@ -1118,19 +1118,49 @@ function App() {
           : total + Math.max(0, upgrade.workforce < 0 ? -upgrade.workforce : 0),
       0,
     );
+  // ESI is the source of truth for the actual deployed numbers. When
+  // a system has live hub_detail, the inspector reads
+  // resources.power.allocated/available and resources.workforce.*
+  // directly. Manual capacity overrides (powerCapacity /
+  // workforceCapacity state) still win because the operator may be
+  // exploring a what-if.
+  const liveInspectorPowerUsed = selectedSystem?.live?.power?.allocated;
+  const liveInspectorPowerCap = selectedSystem?.live?.power?.available;
+  const liveInspectorWfUsed = selectedSystem?.live?.workforce?.allocated;
+  const liveInspectorWfCap = selectedSystem?.live?.workforce?.available;
+  const effectivePowerUsed =
+    typeof liveInspectorPowerUsed === "number"
+      ? liveInspectorPowerUsed
+      : totalPowerUsed;
   const effectivePowerCapacity =
-    powerCapacity ?? totalPowerCapacity;
+    powerCapacity ??
+    (typeof liveInspectorPowerCap === "number"
+      ? liveInspectorPowerCap
+      : totalPowerCapacity);
+  const effectiveWorkforceUsed =
+    typeof liveInspectorWfUsed === "number"
+      ? liveInspectorWfUsed
+      : totalWorkforceUsed;
+  const effectiveUpgradeWorkforceUsed =
+    typeof liveInspectorWfUsed === "number"
+      ? liveInspectorWfUsed
+      : upgradeWorkforceUsed;
   const effectiveWorkforceCapacity =
-    workforceCapacity ?? totalWorkforceCapacity;
+    workforceCapacity ??
+    (typeof liveInspectorWfCap === "number"
+      ? liveInspectorWfCap
+      : totalWorkforceCapacity);
   const powerUsagePercent =
-    effectivePowerCapacity > 0 ? Math.min(100, (totalPowerUsed / effectivePowerCapacity) * 100) : 0;
+    effectivePowerCapacity > 0
+      ? Math.min(100, (effectivePowerUsed / effectivePowerCapacity) * 100)
+      : 0;
   const upgradeWorkforcePercent =
     effectiveWorkforceCapacity > 0
-      ? Math.min(100, (upgradeWorkforceUsed / effectiveWorkforceCapacity) * 100)
+      ? Math.min(100, (effectiveUpgradeWorkforceUsed / effectiveWorkforceCapacity) * 100)
       : 0;
   const totalWorkforcePercent =
     effectiveWorkforceCapacity > 0
-      ? Math.min(100, (totalWorkforceUsed / effectiveWorkforceCapacity) * 100)
+      ? Math.min(100, (effectiveWorkforceUsed / effectiveWorkforceCapacity) * 100)
       : 0;
   const exportWorkforcePercent =
     effectiveWorkforceCapacity > 0
@@ -2270,16 +2300,16 @@ function App() {
                       <span>{t.powerUsage}</span>
                       <span
                         className={
-                          totalPowerUsed > effectivePowerCapacity ? "text-red-400 font-semibold" : undefined
+                          effectivePowerUsed > effectivePowerCapacity ? "text-red-400 font-semibold" : undefined
                         }
                       >
-                        {totalPowerUsed.toLocaleString()} / {effectivePowerCapacity.toLocaleString()}
+                        {effectivePowerUsed.toLocaleString()} / {effectivePowerCapacity.toLocaleString()}
                       </span>
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded bg-slate-800">
                       <div
                         className={`h-full ${
-                          totalPowerUsed > effectivePowerCapacity ? "bg-red-500" : "bg-sov-blue"
+                          effectivePowerUsed > effectivePowerCapacity ? "bg-red-500" : "bg-sov-blue"
                         }`}
                         style={{ width: `${powerUsagePercent}%` }}
                       />
@@ -2290,19 +2320,19 @@ function App() {
                       <span>{t.workforceUsage}</span>
                       <span
                         className={
-                          totalWorkforceUsed > effectiveWorkforceCapacity
+                          effectiveWorkforceUsed > effectiveWorkforceCapacity
                             ? "text-red-400 font-semibold"
                             : undefined
                         }
                       >
-                        {totalWorkforceUsed.toLocaleString()} / {effectiveWorkforceCapacity.toLocaleString()}
+                        {effectiveWorkforceUsed.toLocaleString()} / {effectiveWorkforceCapacity.toLocaleString()}
                       </span>
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded bg-slate-800">
                       <div className="relative h-full w-full">
                         <div
                           className={`absolute left-0 top-0 h-full ${
-                            totalWorkforceUsed > effectiveWorkforceCapacity ? "bg-red-500" : "bg-sov-blue"
+                            effectiveWorkforceUsed > effectiveWorkforceCapacity ? "bg-red-500" : "bg-sov-blue"
                           }`}
                           style={{
                             width: `${upgradeWorkforcePercent}%`,
@@ -2310,7 +2340,7 @@ function App() {
                         />
                         <div
                           className={`absolute top-0 h-full ${
-                            totalWorkforceUsed > effectiveWorkforceCapacity ? "bg-red-500" : "bg-emerald-500"
+                            effectiveWorkforceUsed > effectiveWorkforceCapacity ? "bg-red-500" : "bg-emerald-500"
                           }`}
                           style={{
                             left: `${upgradeWorkforcePercent}%`,
