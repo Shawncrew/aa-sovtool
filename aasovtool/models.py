@@ -34,6 +34,11 @@ class General(models.Model):
 class System(models.Model):
     system_name = models.CharField(max_length=64, unique=True, db_index=True)
     star_id = models.BigIntegerField(null=True, blank=True)
+    # EVE's solar_system_id (30000000-31000000 range). This is the key
+    # ESI uses for sovereignty/structure lookups. Populated by the
+    # sovtool_backfill_system_ids management command via the
+    # POST /universe/ids/ name-resolution endpoint.
+    solar_system_id = models.IntegerField(null=True, blank=True, db_index=True)
     region_name = models.CharField(max_length=64, db_index=True)
     constellation_name = models.CharField(max_length=64, null=True, blank=True)
     security = models.FloatField(default=0.0)

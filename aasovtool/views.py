@@ -310,12 +310,18 @@ def _build_scenario_systems(scenario: models.Scenario) -> list[dict]:
     # translated without N+1 queries.
     upgrade_catalog = {u.type_id: u for u in models.Upgrade.objects.all()}
     system_name_by_id: dict[int, str] = {}
-    for sys_row in models.System.objects.exclude(star_id=None).only(
-        "star_id", "system_name"
+    for sys_row in models.System.objects.exclude(solar_system_id=None).only(
+        "solar_system_id", "system_name"
     ):
-        system_name_by_id[int(sys_row.star_id)] = sys_row.system_name
+        system_name_by_id[int(sys_row.solar_system_id)] = sys_row.system_name
     for system in qs:
-        sov = sov_by_id.get(system.star_id) if system.star_id else None
+        # Join the catalog System to the ESI SovStructure by
+        # solar_system_id (EVE's 30M-range key). The legacy ``star_id``
+        # column held the celestial item ID (40M range) and never
+        # matches; we keep it on the row for back-compat but use
+        # solar_system_id for the merge.
+        join_key = system.solar_system_id or system.star_id
+        sov = sov_by_id.get(join_key) if join_key else None
         hub_detail = (sov.hub_detail or None) if sov else None
         row = _serialize_system(
             system,
