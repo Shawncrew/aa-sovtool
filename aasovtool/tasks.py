@@ -315,6 +315,26 @@ def refresh_corp_sov_hubs() -> int:
         if not owned_ids:
             continue
         corp_owned_hub_ids.update(owned_ids)
+        # If the public /sovereignty/structures endpoint is unavailable
+        # (CCP shuffled it during Equinox rollout), the SovStructure
+        # table will be empty for the hubs we need to detail. Seed
+        # minimal rows from the LIST endpoint payload so hub_detail has
+        # somewhere to land.
+        existing = set(
+            models.SovStructure.objects.filter(structure_id__in=owned_ids).values_list(
+                "structure_id", flat=True
+            )
+        )
+        for entry in hub_list:
+            sid = int(entry.get("id") or entry.get("structure_id") or 0)
+            if not sid or sid in existing:
+                continue
+            models.SovStructure.objects.create(
+                structure_id=sid,
+                structure_type_id=0,
+                solar_system_id=int(entry.get("solar_system_id") or 0),
+                corporation_id=record.corporation_id,
+            )
         hubs = models.SovStructure.objects.filter(structure_id__in=owned_ids)
         for hub in hubs:
             try:

@@ -166,61 +166,78 @@ def _try_public_paths(*paths: tuple[str, str]) -> Any:
     return []
 
 
-def fetch_sovereignty_structures() -> list[dict]:
-    """List of all sov structures (public).
+def _try_public_paths_safe(*paths: tuple[str, str]) -> Any:
+    """Like _try_public_paths but swallows 404 across every candidate.
 
-    Equinox path:   GET https://esi.evetech.net/sovereignty/structures
-    Legacy fallback: GET https://esi.evetech.net/latest/sovereignty/structures/
+    Returns [] if nothing responded. Public sovereignty endpoints have
+    been shuffling around since Equinox; we'd rather log a miss and let
+    the rest of the refresh proceed than crash the whole task.
     """
-    payload = _try_public_paths(
-        ("https://esi.evetech.net", "/sovereignty/structures"),
-        (ESI_BASE, "/sovereignty/structures/"),
-    )
+    last_err: requests.HTTPError | None = None
+    for base, path in paths:
+        try:
+            return _get(path, base=base)
+        except requests.HTTPError as err:
+            if err.response.status_code == 404:
+                last_err = err
+                continue
+            raise
+    if last_err is not None:
+        print(f"[sovtool] public endpoint not found at any candidate, returning [].")
+    return []
+
+
+def _unwrap_list(payload, keys: tuple[str, ...]) -> list[dict]:
+    if isinstance(payload, list):
+        return payload
     if isinstance(payload, dict):
-        for key in ("structures", "sovereignty_structures", "items"):
+        for key in keys:
             inner = payload.get(key)
             if isinstance(inner, list):
                 return inner
-    return payload if isinstance(payload, list) else []
+    return []
+
+
+def fetch_sovereignty_structures() -> list[dict]:
+    """List of all sov structures (public). Returns [] if CCP has moved
+    the endpoint and none of our candidates match — the rest of the
+    refresh still proceeds.
+    """
+    payload = _try_public_paths_safe(
+        ("https://esi.evetech.net", "/sovereignty/structures"),
+        ("https://esi.evetech.net", "/sovereignty-structures"),
+        ("https://esi.evetech.net", "/sovereignty/structures/list"),
+        (ESI_BASE, "/sovereignty/structures/"),
+    )
+    return _unwrap_list(payload, ("structures", "sovereignty_structures", "items"))
 
 
 def fetch_sovereignty_map() -> list[dict]:
-    """System → owner/faction (public)."""
-    payload = _try_public_paths(
+    payload = _try_public_paths_safe(
         ("https://esi.evetech.net", "/sovereignty/map"),
+        ("https://esi.evetech.net", "/sovereignty-map"),
         (ESI_BASE, "/sovereignty/map/"),
     )
-    if isinstance(payload, dict):
-        inner = payload.get("map") or payload.get("systems")
-        if isinstance(inner, list):
-            return inner
-    return payload if isinstance(payload, list) else []
+    return _unwrap_list(payload, ("map", "systems"))
 
 
 def fetch_sovereignty_campaigns() -> list[dict]:
-    """Active campaigns (public)."""
-    payload = _try_public_paths(
+    payload = _try_public_paths_safe(
         ("https://esi.evetech.net", "/sovereignty/campaigns"),
+        ("https://esi.evetech.net", "/sovereignty-campaigns"),
         (ESI_BASE, "/sovereignty/campaigns/"),
     )
-    if isinstance(payload, dict):
-        inner = payload.get("campaigns")
-        if isinstance(inner, list):
-            return inner
-    return payload if isinstance(payload, list) else []
+    return _unwrap_list(payload, ("campaigns",))
 
 
 def fetch_sovereignty_systems() -> list[dict]:
     """Equinox combined occupancy + ADM data per system."""
-    payload = _try_public_paths(
+    payload = _try_public_paths_safe(
         ("https://esi.evetech.net", "/sovereignty/systems"),
+        ("https://esi.evetech.net", "/sovereignty-systems"),
         (ESI_BASE, "/sovereignty/systems/"),
     )
-    if isinstance(payload, dict):
-        inner = payload.get("systems") or payload.get("sovereignty_systems")
-        if isinstance(inner, list):
-            return inner
-    return payload if isinstance(payload, list) else []
+    return _unwrap_list(payload, ("systems", "sovereignty_systems"))
 
 
 _RAIDABLE_PATH: str | None = None
