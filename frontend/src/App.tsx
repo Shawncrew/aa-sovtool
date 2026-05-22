@@ -2071,54 +2071,12 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    if (!authState?.token) {
-      return;
-    }
-
-    let socket: WebSocket | null = null;
-    let shouldReconnect = true;
-
-    const connect = () => {
-      const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-      const socketUrl = `${protocol}://${window.location.host}/api/ws/scenarios?token=${encodeURIComponent(
-        authState.token,
-      )}`;
-      socket = new WebSocket(socketUrl);
-
-      socket.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data as string);
-          if (message.type === "scenario_updated" && typeof message.name === "string") {
-            queryClient.invalidateQueries({ queryKey: ["scenario", message.name] }).catch(
-              () => {
-                /* ignore */
-              },
-            );
-          }
-        } catch (error) {
-          console.warn("Failed to parse scenario update message", error);
-        }
-      };
-
-      socket.onclose = () => {
-        if (shouldReconnect) {
-          setTimeout(connect, 2000);
-        }
-      };
-
-      socket.onerror = () => {
-        socket?.close();
-      };
-    };
-
-    connect();
-
-    return () => {
-      shouldReconnect = false;
-      socket?.close();
-    };
-  }, [authState?.token, queryClient]);
+  // The legacy FastAPI build pushed scenario updates over a WebSocket
+  // at /api/ws/scenarios. Under Alliance Auth there's no WS endpoint
+  // (and gunicorn doesn't serve WS anyway), so the reconnect loop was
+  // spamming 404s into the access log every ~5 seconds. Drop it.
+  // Periodic refresh of cached queries is handled by react-query's
+  // staleTime + manual refetches after a save.
 
   if (!authState) {
     return loginContent;
