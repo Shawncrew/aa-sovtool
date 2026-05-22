@@ -144,24 +144,83 @@ def _get_paged(
 # --- Public endpoints -----------------------------------------------------
 
 
+def _try_public_paths(*paths: tuple[str, str]) -> Any:
+    """Try a sequence of (base, path) pairs until one returns 200.
+
+    CCP retired several legacy /latest/sovereignty/* endpoints when
+    Equinox shipped; the replacements live on the bare host with the
+    X-Compatibility-Date header. We try the new endpoint first, then
+    fall back to /latest/ so older deployments still work.
+    """
+    last_err: requests.HTTPError | None = None
+    for base, path in paths:
+        try:
+            return _get(path, base=base)
+        except requests.HTTPError as err:
+            if err.response.status_code == 404:
+                last_err = err
+                continue
+            raise
+    if last_err is not None:
+        raise last_err
+    return []
+
+
 def fetch_sovereignty_structures() -> list[dict]:
-    """GET /sovereignty/structures/ — list of all sov structures (public)."""
-    return _get("/sovereignty/structures/")
+    """List of all sov structures (public).
+
+    Equinox path:   GET https://esi.evetech.net/sovereignty/structures
+    Legacy fallback: GET https://esi.evetech.net/latest/sovereignty/structures/
+    """
+    payload = _try_public_paths(
+        ("https://esi.evetech.net", "/sovereignty/structures"),
+        (ESI_BASE, "/sovereignty/structures/"),
+    )
+    if isinstance(payload, dict):
+        for key in ("structures", "sovereignty_structures", "items"):
+            inner = payload.get(key)
+            if isinstance(inner, list):
+                return inner
+    return payload if isinstance(payload, list) else []
 
 
 def fetch_sovereignty_map() -> list[dict]:
-    """GET /sovereignty/map/ — system → owner/faction (public)."""
-    return _get("/sovereignty/map/")
+    """System → owner/faction (public)."""
+    payload = _try_public_paths(
+        ("https://esi.evetech.net", "/sovereignty/map"),
+        (ESI_BASE, "/sovereignty/map/"),
+    )
+    if isinstance(payload, dict):
+        inner = payload.get("map") or payload.get("systems")
+        if isinstance(inner, list):
+            return inner
+    return payload if isinstance(payload, list) else []
 
 
 def fetch_sovereignty_campaigns() -> list[dict]:
-    """GET /sovereignty/campaigns/ — active campaigns (public)."""
-    return _get("/sovereignty/campaigns/")
+    """Active campaigns (public)."""
+    payload = _try_public_paths(
+        ("https://esi.evetech.net", "/sovereignty/campaigns"),
+        (ESI_BASE, "/sovereignty/campaigns/"),
+    )
+    if isinstance(payload, dict):
+        inner = payload.get("campaigns")
+        if isinstance(inner, list):
+            return inner
+    return payload if isinstance(payload, list) else []
 
 
 def fetch_sovereignty_systems() -> list[dict]:
-    """GET /sovereignty/systems/ — Equinox combined occupancy + ADM data."""
-    return _get("/sovereignty/systems/")
+    """Equinox combined occupancy + ADM data per system."""
+    payload = _try_public_paths(
+        ("https://esi.evetech.net", "/sovereignty/systems"),
+        (ESI_BASE, "/sovereignty/systems/"),
+    )
+    if isinstance(payload, dict):
+        inner = payload.get("systems") or payload.get("sovereignty_systems")
+        if isinstance(inner, list):
+            return inner
+    return payload if isinstance(payload, list) else []
 
 
 _RAIDABLE_PATH: str | None = None
