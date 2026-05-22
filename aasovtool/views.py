@@ -81,17 +81,13 @@ def _serialize_system(
             base, hub_detail, upgrade_catalog or {}, system_name_by_id or {}
         )
 
-    if override:
-        if override.role:
-            base["role"] = override.role
-        if override.upgrades:
-            base["upgrades"] = override.upgrades
-        if override.transfers:
-            base["transfers"] = override.transfers
-        if override.position:
-            base["position"] = override.position
-        if override.ansiblex_partner:
-            base["ansiblexPartner"] = override.ansiblex_partner
+    # ESI is the source of truth for role / upgrades / transfers /
+    # ansiblex partner. The override table only contributes layout
+    # (position) so admins can arrange the planner cards. Other
+    # override fields are ignored on the main map; once we add
+    # alternate scenarios, those will be presented as separate views.
+    if override and override.position:
+        base["position"] = override.position
     return base
 
 
@@ -147,12 +143,30 @@ def _apply_hub_detail_to_system(
         base["upgrades"] = upgrades_out
 
     # ---- Transfers: build edges from the *state* block (real amounts). ----
+    #
+    # Live ESI shapes (confirmed):
+    #   import:  {"import":  {"sources":      [{solar_system_id, amount}]}}
+    #   export:  {"export":  {solar_system_id, amount}}      <-- single dest
+    #   transit: {"transit": true}                            <-- boolean
+    #
+    # We only emit edges from the EXPORT side (one transfer per export
+    # hub). Import-side `sources` is mirror data — the corresponding
+    # export hub's record already carries the same edge.
     transfers_out: list[dict] = []
     state = transport.get("state") or {}
-    if state.get("export"):
-        for dest in state["export"].get("destinations") or state["export"].get(
-            "sources"
-        ) or []:
+    export_block = state.get("export")
+    if isinstance(export_block, dict):
+        # Tolerate both the confirmed single-dest shape and a future
+        # array shape (just in case CCP extends it).
+        if "solar_system_id" in export_block:
+            dests = [export_block]
+        else:
+            dests = (
+                export_block.get("destinations")
+                or export_block.get("sources")
+                or []
+            )
+        for dest in dests:
             target_id = dest.get("solar_system_id")
             target_name = system_name_by_id.get(int(target_id)) if target_id else None
             if not target_name:
@@ -220,12 +234,19 @@ def _apply_hub_detail_to_system(
 
 def _detect_transport_role(node: dict | None) -> str | None:
     """Read the oneOf discriminator. The schema embeds import/export/transit
-    as keys; whichever is present is the active role.
+    as keys; whichever is present (and truthy) is the active role.
+
+    Confirmed live shapes:
+      import:  {"import":  {"sources": [...]}}
+      export:  {"export":  {solar_system_id, amount}}
+      transit: {"transit": true}
     """
     if not isinstance(node, dict):
         return None
     for candidate in ("import", "export", "transit"):
-        if candidate in node:
+        value = node.get(candidate)
+        # Accept truthy dicts AND truthy bools (transit = true).
+        if value or value is True:
             return candidate
     return None
 
