@@ -1,5 +1,4 @@
 {% extends "allianceauth/base-bs5.html" %}
-{% load static %}
 
 {% block page_title %}{{ page_title }}{% endblock %}
 
@@ -19,19 +18,24 @@
     };
 </script>
 
-{% if vite_manifest %}
-    {# Load entry chunk(s) declared in the Vite manifest, if present. #}
-    {% for src, entry in vite_manifest.items %}
-        {% if entry.isEntry %}
-            <script type="module" src="{% static 'aasovtool/' %}{{ entry.file }}"></script>
-            {% for css in entry.css %}
-                <link rel="stylesheet" href="{% static 'aasovtool/' %}{{ css }}" />
-            {% endfor %}
-        {% endif %}
+{% if frontend_assets.ready %}
+    {% for href in frontend_assets.styles %}
+        <link rel="stylesheet" href="{{ href }}" />
+    {% endfor %}
+    {% for src in frontend_assets.scripts %}
+        <script type="module" src="{{ src }}"></script>
     {% endfor %}
 {% else %}
-    {# Fallback: load conventional bundle filenames. #}
-    <link rel="stylesheet" href="{% static 'aasovtool/assets/index.css' %}" />
-    <script type="module" src="{% static 'aasovtool/assets/index.js' %}"></script>
+    <div class="alert alert-warning m-4">
+        <strong>Sovereignty Planner frontend is not built yet.</strong>
+        <p class="mb-1">
+            The React bundle has not been deployed. Run the following on your
+            dev machine and re-deploy:
+        </p>
+        <pre class="mb-0"><code>cd frontend &amp;&amp; npm install &amp;&amp; npm run build
+git add aasovtool/static/aasovtool
+git commit -m "Build frontend bundle"
+git push</code></pre>
+    </div>
 {% endif %}
 {% endblock %}

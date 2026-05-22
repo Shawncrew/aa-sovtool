@@ -139,14 +139,25 @@ def _get_or_create_default_scenario() -> models.Scenario:
 # --- Pages ----------------------------------------------------------------
 
 
-def _load_vite_manifest() -> dict:
-    """Load the Vite ``manifest.json`` (or ``.vite/manifest.json``) shipped
-    with the built React bundle so we can inject the hashed entry chunk
-    into the host template.
+def _resolve_frontend_assets() -> dict:
+    """Look up the built React bundle and return fully-resolved static URLs.
+
+    Returns a dict with keys:
+        scripts: list[str]  -- absolute static URLs for entry JS chunks
+        styles:  list[str]  -- absolute static URLs for stylesheets
+        ready:   bool       -- True if the bundle is present
+
+    Resolves URLs through ``staticfiles_storage`` so it works with both
+    plain and ManifestStaticFilesStorage backends. If no manifest is
+    found (frontend has not been built yet), returns ``ready=False`` and
+    empty lists so the template can render a friendly placeholder
+    instead of crashing.
     """
     import json as _json
     from django.contrib.staticfiles import finders
+    from django.contrib.staticfiles.storage import staticfiles_storage
 
+    manifest = {}
     for candidate in (
         "aasovtool/.vite/manifest.json",
         "aasovtool/manifest.json",
@@ -156,10 +167,37 @@ def _load_vite_manifest() -> dict:
             continue
         try:
             with open(path, "r", encoding="utf-8") as fh:
-                return _json.load(fh)
+                manifest = _json.load(fh)
+            break
         except (OSError, ValueError):
             continue
-    return {}
+
+    scripts: list[str] = []
+    styles: list[str] = []
+
+    def _safe_url(rel_path: str) -> str | None:
+        try:
+            return staticfiles_storage.url(rel_path)
+        except (ValueError, OSError):
+            return None
+
+    if manifest:
+        for entry in manifest.values():
+            if not entry.get("isEntry"):
+                continue
+            script = _safe_url(f"aasovtool/{entry['file']}")
+            if script:
+                scripts.append(script)
+            for css in entry.get("css", []) or []:
+                style = _safe_url(f"aasovtool/{css}")
+                if style:
+                    styles.append(style)
+
+    return {
+        "scripts": scripts,
+        "styles": styles,
+        "ready": bool(scripts),
+    }
 
 
 @login_required
@@ -170,7 +208,7 @@ def index(request):
         "role": _user_role(request),
         "editable_regions": _editable_regions(request),
         "default_scenario": app_settings.AASOVTOOL_DEFAULT_SCENARIO,
-        "vite_manifest": _load_vite_manifest(),
+        "frontend_assets": _resolve_frontend_assets(),
     }
     return render(request, "aasovtool/sovtool.html", context)
 
