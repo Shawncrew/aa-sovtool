@@ -55,6 +55,11 @@ class System(models.Model):
     base_magmatic_gas_per_hour = models.IntegerField(default=0)
     # adjacency by system name (matches original JSON shape)
     neighbors = models.JSONField(default=list, blank=True)
+    # Canonical card position used by the live map. Seeded from the
+    # bundled default.json; admins can edit via the Django admin or a
+    # one-shot management command. User maps override via SystemOverride.
+    canonical_x = models.FloatField(null=True, blank=True)
+    canonical_y = models.FloatField(null=True, blank=True)
 
     class Meta:
         ordering = ("system_name",)
@@ -82,11 +87,34 @@ class Upgrade(models.Model):
 
 
 class Scenario(models.Model):
+    """A user-created planning map (or the special live map).
+
+    The live map (``is_live=True``, exactly one row) renders straight
+    ESI hub-detail data and is uneditable. User-created maps copy
+    overrides from a base (live or another user map) and are saved
+    incrementally as the user edits the planner.
+    """
+
     name = models.CharField(max_length=128, unique=True)
     description = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(default=timezone.now)
     is_default = models.BooleanField(default=False)
+    # The Live Map row, auto-managed. Exactly one Scenario should
+    # carry this flag.
+    is_live = models.BooleanField(default=False)
+    # Who created this map. NULL on the auto-managed live map.
+    creator = models.ForeignKey(
+        "auth.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sovtool_maps",
+    )
+    # Name of the map this one was branched from. NULL means branched
+    # from the live map. Kept as a string rather than a hard FK so a
+    # deleted parent doesn't cascade-wipe its descendants.
+    based_on_name = models.CharField(max_length=128, null=True, blank=True)
 
     class Meta:
         ordering = ("-updated_at",)

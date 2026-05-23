@@ -17,7 +17,17 @@ import type {
   UserSummary,
 } from "./types";
 import { fetchSystems } from "./api/systems";
-import { fetchScenario, saveScenario } from "./api/scenarios";
+import {
+  createMap,
+  deleteMap,
+  fetchLiveMap,
+  fetchMaps,
+  fetchUserMap,
+  saveScenario,
+  saveUserMap,
+  type MapResponse,
+  type MapSummary,
+} from "./api/scenarios";
 import { fetchUpgrades } from "./api/upgrades";
 import { login, fetchCurrentUser, fetchUsers, createUser, updateUser, deleteUser } from "./api/auth";
 import { UpgradeIcon } from "./components/UpgradeIcon";
@@ -272,6 +282,14 @@ function App() {
   const [changeHistory, setChangeHistory] = useState<ChangeEntry[]>([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [systemColorMode, setSystemColorMode] = useState<string>("none");
+  // Map system: which map is currently loaded — 'live' (read-only,
+  // source of truth) or a user-created map name. State drives both
+  // the tabs and the query target.
+  const [currentMap, setCurrentMap] = useState<string>("live");
+  const [isMapsModalOpen, setIsMapsModalOpen] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLiveTab = currentMap === "live";
   const scenarioName = DEFAULT_SCENARIO_NAME;
   const canonicalScenarioName = DEFAULT_SCENARIO_NAME;
   const historyStorageKey = `sovtool:change-history:${HISTORY_STORAGE_VERSION}:${canonicalScenarioName}`;
@@ -592,38 +610,33 @@ function App() {
     }
   }, [changeHistory, historyStorageKey, hasLoadedHistory]);
 
+  // The Live Map is the source of truth (read-only ESI mirror); user
+  // maps are editable copies. We query whichever the user has
+  // selected via the tab.
   const {
     data: scenarioData,
     isLoading,
     isError,
     error,
-  } = useQuery<ScenarioResponse>({
-    queryKey: ["scenario", scenarioName],
+  } = useQuery<MapResponse>({
+    queryKey: ["map", currentMap],
     retry: false,
     queryFn: async () => {
       try {
-        return await fetchScenario(scenarioName);
+        return currentMap === "live"
+          ? await fetchLiveMap()
+          : await fetchUserMap(currentMap);
       } catch (err) {
         if (isAxiosError(err)) {
           if (err.response?.status === 401) {
             handleLogout();
             throw err;
           }
-          if (err.response?.status === 404) {
-            try {
-          const baseSystems = await fetchSystems();
-          return {
-            name: scenarioName,
-            description: null,
-            systems: baseSystems,
-            updated_at: new Date().toISOString(),
-          };
-            } catch (systemsError) {
-              if (isAxiosError(systemsError) && systemsError.response?.status === 401) {
-                handleLogout();
-              }
-              throw systemsError;
-            }
+          if (err.response?.status === 404 && currentMap !== "live") {
+            // The user map went away (deleted elsewhere); fall back
+            // to the live map instead of crashing.
+            setCurrentMap("live");
+            return await fetchLiveMap();
           }
         }
         throw err;
@@ -631,6 +644,38 @@ function App() {
     },
     enabled: Boolean(authState),
   });
+
+  // Auto-save: any time `systems` changes while a user map is loaded,
+  // PUT the new payload after a short debounce. The Live Map is
+  // immutable and never auto-saves.
+  useEffect(() => {
+    if (isLiveTab) return;
+    if (!canEdit) return;
+    if (systems.length === 0) return;
+    if (autoSaveTimer.current) {
+      clearTimeout(autoSaveTimer.current);
+    }
+    autoSaveTimer.current = setTimeout(async () => {
+      setAutoSaveStatus("saving");
+      try {
+        await saveUserMap(currentMap, systems);
+        setAutoSaveStatus("saved");
+        setTimeout(() => setAutoSaveStatus("idle"), 1500);
+      } catch (err) {
+        setAutoSaveStatus("error");
+        if (isAxiosError(err) && err.response?.status === 401) {
+          handleLogout();
+        }
+      }
+    }, 800);
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+    // saveScenario is intentionally not in the dep list; we use
+    // saveUserMap directly here so the import-only `saveScenario`
+    // suppression below stays accurate.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [systems, currentMap, isLiveTab, canEdit]);
 
   useEffect(() => {
     if (scenarioData?.systems) {
@@ -2120,25 +2165,26 @@ function App() {
           authentication, users, and translations; we don't render any
           banner of our own in the planner area. */}
       {toolbarTarget && createPortal(
-        <div className="d-flex flex-wrap align-items-center gap-2 ms-auto me-3" style={{ pointerEvents: "auto" }}>
-          {canEdit && (
-            <button
-              type="button"
-              className="btn btn-sm btn-outline-danger"
-              onClick={handleSaveScenario}
-              disabled={mutation.isPending || isLoading}
-            >
-              {mutation.isPending ? "Saving…" : "Save Scenario"}
-            </button>
-          )}
-          {isAdmin && (window as unknown as { AASOVTOOL_BOOTSTRAP?: { addTokenUrl?: string } }).AASOVTOOL_BOOTSTRAP?.addTokenUrl && (
-            <a
-              className="btn btn-sm btn-outline-info"
-              href={(window as unknown as { AASOVTOOL_BOOTSTRAP: { addTokenUrl: string } }).AASOVTOOL_BOOTSTRAP.addTokenUrl}
-            >
-              Add Corp Token
-            </a>
-          )}
+        <div
+          className="d-flex flex-wrap align-items-center gap-2 w-100 mx-3"
+          style={{ pointerEvents: "auto" }}
+        >
+          {/* Left-justified group: Live Map, Maps, Gradient */}
+          <button
+            type="button"
+            className={`btn btn-sm ${isLiveTab ? "btn-light" : "btn-outline-light"}`}
+            onClick={() => setCurrentMap("live")}
+            title="The live, source-of-truth map driven by ESI (read-only)."
+          >
+            Live Map
+          </button>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-light"
+            onClick={() => setIsMapsModalOpen(true)}
+          >
+            Maps
+          </button>
           <select
             value={systemColorMode}
             onChange={(e) => setSystemColorMode(e.target.value)}
@@ -2153,14 +2199,41 @@ function App() {
             <option value="superionicIce">Superionic Ice</option>
             <option value="magmaticGas">Magmatic Gas</option>
           </select>
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-light"
-            onClick={() => setIsHistoryOpen((prev) => !prev)}
-          >
-            {isHistoryOpen ? "Hide History" : `History (${changeHistory.length})`}
-          </button>
-          {canEdit && (
+          {!isLiveTab && (
+            <span className="text-light small ms-2" title={`Auto-save: ${autoSaveStatus}`}>
+              {autoSaveStatus === "saving" && "Saving…"}
+              {autoSaveStatus === "saved" && "✓ Saved"}
+              {autoSaveStatus === "error" && "⚠ Save failed"}
+            </span>
+          )}
+
+          {/* Right-justified group: Add Corp Token (admin) */}
+          <div className="ms-auto d-flex align-items-center gap-2">
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-light"
+              onClick={() => setIsHistoryOpen((prev) => !prev)}
+            >
+              {isHistoryOpen ? "Hide History" : `History (${changeHistory.length})`}
+            </button>
+            {isAdmin &&
+              (window as unknown as { AASOVTOOL_BOOTSTRAP?: { addTokenUrl?: string } })
+                .AASOVTOOL_BOOTSTRAP?.addTokenUrl && (
+                <a
+                  className="btn btn-sm btn-outline-info"
+                  href={
+                    (
+                      window as unknown as {
+                        AASOVTOOL_BOOTSTRAP: { addTokenUrl: string };
+                      }
+                    ).AASOVTOOL_BOOTSTRAP.addTokenUrl
+                  }
+                >
+                  Add Corp Token
+                </a>
+              )}
+          </div>
+          {canEdit && !isLiveTab && (
             <>
               <button
                 type="button"
@@ -2234,6 +2307,44 @@ function App() {
           </div>
         </div>
       )}
+      {/* Tab bar: Live Map is always present; Loaded Map appears when
+          the user has opened a saved map from the Maps modal. */}
+      <div className="flex items-center gap-1 border-b border-[#2f2942] bg-[#0c0b18] px-3">
+        <button
+          type="button"
+          onClick={() => setCurrentMap("live")}
+          className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wide rounded-t border-b-2 transition ${
+            isLiveTab
+              ? "border-[#f74b68] text-[#f7f5ff] bg-[#1a1529]"
+              : "border-transparent text-[#9b91bb] hover:text-[#f7f5ff]"
+          }`}
+        >
+          Live Map
+        </button>
+        {!isLiveTab && (
+          <button
+            type="button"
+            className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide rounded-t border-b-2 border-[#49d7ff] text-[#f7f5ff] bg-[#1a1529]"
+          >
+            Loaded Map: {currentMap}
+            <span
+              className="ml-2 inline-block text-[#9b91bb] hover:text-rose-300 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentMap("live");
+              }}
+              title="Close this map (returns to Live)"
+            >
+              ×
+            </span>
+          </button>
+        )}
+        {isLiveTab && (
+          <span className="ml-2 text-[10px] uppercase tracking-wide text-[#857aa5]">
+            Read-only • Source of truth
+          </span>
+        )}
+      </div>
       <main className="flex flex-col lg:flex-row flex-1 overflow-hidden">
         <section className="flex-1 overflow-hidden min-w-0">
           {isLoading && (
@@ -2714,6 +2825,199 @@ function App() {
           </div>
         </aside>
       </main>
+      {isMapsModalOpen && (
+        <MapsModal
+          currentMap={currentMap}
+          canEdit={canEdit}
+          isAdmin={isAdmin}
+          username={authState?.username ?? ""}
+          onClose={() => setIsMapsModalOpen(false)}
+          onOpenMap={(name) => {
+            setCurrentMap(name);
+            setIsMapsModalOpen(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+interface MapsModalProps {
+  currentMap: string;
+  canEdit: boolean;
+  isAdmin: boolean;
+  username: string;
+  onClose: () => void;
+  onOpenMap: (name: string) => void;
+}
+
+function MapsModal({ currentMap: _currentMap, canEdit, isAdmin, username, onClose, onOpenMap }: MapsModalProps) {
+  const queryClient = useQueryClient();
+  const mapsQuery = useQuery<MapSummary[]>({
+    queryKey: ["maps"],
+    queryFn: fetchMaps,
+  });
+  const [newName, setNewName] = useState("");
+  const [newBase, setNewBase] = useState<string>("live");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const maps = mapsQuery.data ?? [];
+
+  const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+    if (!newName.trim()) {
+      setError("Name is required.");
+      return;
+    }
+    setPending(true);
+    try {
+      const created = await createMap({ name: newName.trim(), basedOn: newBase });
+      await queryClient.invalidateQueries({ queryKey: ["maps"] });
+      setNewName("");
+      setNewBase("live");
+      onOpenMap(created.name);
+    } catch (err) {
+      const msg =
+        isAxiosError(err) && err.response?.data?.detail
+          ? String(err.response.data.detail)
+          : "Failed to create map.";
+      setError(msg);
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleDelete = async (name: string) => {
+    if (typeof window !== "undefined" && !window.confirm(`Delete map "${name}"? This cannot be undone.`)) {
+      return;
+    }
+    try {
+      await deleteMap(name);
+      await queryClient.invalidateQueries({ queryKey: ["maps"] });
+    } catch (err) {
+      const msg =
+        isAxiosError(err) && err.response?.data?.detail
+          ? String(err.response.data.detail)
+          : "Failed to delete map.";
+      setError(msg);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-3xl rounded-lg border border-[#2f2942] bg-[#100f1f] shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-[#2f2942] px-5 py-4">
+          <h2 className="text-lg font-semibold text-[#f7f5ff]">Maps</h2>
+          <button
+            type="button"
+            className="rounded border border-[#3a3450] px-3 py-1 text-xs uppercase tracking-wide text-[#d6cfee] hover:bg-[#251e36]"
+            onClick={onClose}
+          >
+            Close
+          </button>
+        </div>
+
+        {/* List of existing maps */}
+        <div className="max-h-72 overflow-y-auto px-5 py-4">
+          {mapsQuery.isLoading ? (
+            <p className="text-sm text-[#9b91bb]">Loading…</p>
+          ) : maps.length === 0 ? (
+            <p className="text-sm text-[#9b91bb]">No user maps yet. Create one below.</p>
+          ) : (
+            <ul className="space-y-2">
+              {maps.map((m) => {
+                const canDelete = isAdmin || m.creator === username;
+                return (
+                  <li
+                    key={m.name}
+                    className="flex items-center justify-between gap-3 rounded border border-[#2f2942] bg-[#160f25] px-4 py-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-semibold text-[#f7f5ff]">{m.name}</div>
+                      <div className="text-xs text-[#9b91bb]">
+                        by {m.creator ?? "unknown"} · created{" "}
+                        {new Date(m.createdAt).toLocaleDateString()} ·{" "}
+                        {m.regions.length > 0 ? m.regions.join(", ") : "no edited regions"}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="rounded border border-[#49d7ff] px-3 py-1 text-xs font-semibold text-[#49d7ff] hover:bg-[#49d7ff] hover:text-[#0b0a17]"
+                        onClick={() => onOpenMap(m.name)}
+                      >
+                        Open
+                      </button>
+                      {canDelete && (
+                        <button
+                          type="button"
+                          className="rounded border border-rose-500 px-3 py-1 text-xs font-semibold text-rose-300 hover:bg-rose-600 hover:text-white"
+                          onClick={() => handleDelete(m.name)}
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        {/* Create new map */}
+        {canEdit && (
+          <form
+            className="border-t border-[#2f2942] px-5 py-4 flex flex-col gap-3"
+            onSubmit={handleCreate}
+          >
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-[#d6cfee]">
+              Create new map
+            </h3>
+            {error && (
+              <p className="rounded border border-rose-600 bg-rose-900/30 px-3 py-2 text-xs text-rose-200">
+                {error}
+              </p>
+            )}
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="text"
+                placeholder="Map name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                className="flex-1 min-w-[160px] rounded border border-[#3a3450] bg-[#0d0d1c] px-3 py-2 text-sm text-slate-100 focus:border-[#49d7ff] focus:outline-none"
+              />
+              <select
+                value={newBase}
+                onChange={(e) => setNewBase(e.target.value)}
+                className="rounded border border-[#3a3450] bg-[#0d0d1c] px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="live">Based on: Live</option>
+                {maps.map((m) => (
+                  <option key={m.name} value={m.name}>
+                    Based on: {m.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                disabled={pending}
+                className="rounded bg-emerald-500 px-4 py-2 text-sm font-semibold text-[#0f172a] hover:bg-emerald-400 disabled:opacity-50"
+              >
+                {pending ? "Creating…" : "Create"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 }

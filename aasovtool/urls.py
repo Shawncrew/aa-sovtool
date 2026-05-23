@@ -17,6 +17,10 @@ urlpatterns = [
     path("api/upgrades", views.api_upgrades, name="api_upgrades"),
     path("api/scenarios", views.api_scenarios, name="api_scenarios"),
     path("api/scenarios/<str:name>", views.api_scenario_detail, name="api_scenario_detail"),
+    # Map management (Live map + user-created maps).
+    path("api/maps", views.api_maps, name="api_maps"),
+    path("api/maps/live", views.api_map_live, name="api_map_live"),
+    path("api/maps/<str:name>", views.api_map_detail, name="api_map_detail"),
     path("api/users", views.api_users, name="api_users"),
     path("api/users/<str:username>", views.api_user_detail, name="api_user_detail"),
     # ESI live data

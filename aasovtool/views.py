@@ -50,6 +50,12 @@ def _serialize_system(
       2. live ESI hub-detail (if a hub is present and we have a token)
       3. scenario override (user planning edits)
     """
+    # Canonical position from the System catalog is the default; user
+    # maps can override via SystemOverride.position.
+    canonical_pos = None
+    if system.canonical_x is not None and system.canonical_y is not None:
+        canonical_pos = {"x": system.canonical_x, "y": system.canonical_y}
+
     base = {
         "systemName": system.system_name,
         "starID": system.star_id,
@@ -71,7 +77,7 @@ def _serialize_system(
         "role": "transit",
         "upgrades": [],
         "transfers": [],
-        "position": None,
+        "position": canonical_pos,
         "ansiblexPartner": None,
         "live": None,
     }
@@ -342,8 +348,21 @@ def _editable_regions(request) -> list[str]:
     )
 
 
-def _build_scenario_systems(scenario: models.Scenario) -> list[dict]:
-    overrides = {ov.system_name: ov for ov in scenario.overrides.all()}
+def _build_scenario_systems(
+    scenario: models.Scenario | None, *, apply_overrides: bool = True
+) -> list[dict]:
+    """Build the per-system payload for a map.
+
+    ``apply_overrides=False`` is used for the Live Map: ESI hub_detail
+    + System canonical positions only, no scenario overrides applied
+    even if the scenario row carries them. This guarantees the Live
+    Map is a true read-only mirror of ESI state.
+    """
+    overrides = (
+        {ov.system_name: ov for ov in scenario.overrides.all()}
+        if scenario and apply_overrides
+        else {}
+    )
     region_filter = [r.lower() for r in app_settings.AASOVTOOL_ALLOWED_REGIONS]
     out: list[dict] = []
     qs = models.System.objects.all()
@@ -642,6 +661,196 @@ def api_scenario_detail(request, name: str):
 
     return JsonResponse(
         _serialize_scenario(scenario, _build_scenario_systems(scenario))
+    )
+
+
+# --- Map management (Live + user maps) -----------------------------------
+
+
+def _map_summary(scenario: models.Scenario) -> dict:
+    """Serialise a map for the listing modal: includes regions covered
+    by the map's overrides + creator + timestamps.
+    """
+    region_names = list(
+        models.System.objects.filter(
+            system_name__in=scenario.overrides.values_list("system_name", flat=True)
+        ).values_list("region_name", flat=True).distinct()
+    )
+    return {
+        "name": scenario.name,
+        "description": scenario.description,
+        "createdAt": scenario.created_at.isoformat(),
+        "updatedAt": scenario.updated_at.isoformat(),
+        "isLive": scenario.is_live,
+        "creator": scenario.creator.username if scenario.creator else None,
+        "basedOn": scenario.based_on_name,
+        "regions": sorted({r for r in region_names if r}),
+        "overrideCount": scenario.overrides.count(),
+    }
+
+
+def _ensure_live_map() -> models.Scenario:
+    live, _ = models.Scenario.objects.get_or_create(
+        is_live=True,
+        defaults={
+            "name": "live",
+            "is_default": True,
+            "description": "Source-of-truth map driven by ESI.",
+        },
+    )
+    return live
+
+
+@login_required
+@permission_required("aasovtool.view_sovtool", raise_exception=True)
+@require_http_methods(["GET", "POST"])
+def api_maps(request):
+    """GET → list user maps; POST → create a new user map.
+
+    POST body: {name, basedOn?: str | "live"}.
+    On create, copies overrides from the base map so the new map opens
+    pre-populated with whatever the base has.
+    """
+    if request.method == "GET":
+        rows = [
+            _map_summary(s)
+            for s in models.Scenario.objects.exclude(is_live=True).order_by("name")
+        ]
+        return JsonResponse(rows, safe=False)
+
+    if not request.user.has_perm("aasovtool.edit_sovtool"):
+        return JsonResponse({"detail": "Permission denied."}, status=403)
+
+    payload = _json_request(request)
+    name = (payload.get("name") or "").strip()
+    based_on = (payload.get("basedOn") or "live").strip()
+    if not name:
+        return JsonResponse({"detail": "Name is required."}, status=400)
+    if name.lower() == "live":
+        return JsonResponse({"detail": "Reserved name."}, status=400)
+    if models.Scenario.objects.filter(name=name).exists():
+        return JsonResponse({"detail": "A map with that name already exists."}, status=409)
+
+    scenario = models.Scenario.objects.create(
+        name=name,
+        description=payload.get("description") or None,
+        creator=request.user,
+        based_on_name=based_on if based_on != "live" else "live",
+        updated_at=timezone.now(),
+        created_at=timezone.now(),
+    )
+
+    # Copy overrides from the base map (unless basing off live, which
+    # has no relevant overrides — positions come from System catalog).
+    if based_on and based_on != "live":
+        base = models.Scenario.objects.filter(name=based_on).first()
+        if base:
+            for ov in base.overrides.all():
+                models.SystemOverride.objects.create(
+                    scenario=scenario,
+                    system_name=ov.system_name,
+                    role=ov.role,
+                    upgrades=ov.upgrades,
+                    transfers=ov.transfers,
+                    position=ov.position,
+                    ansiblex_partner=ov.ansiblex_partner,
+                )
+    return JsonResponse(_map_summary(scenario), status=201)
+
+
+@login_required
+@permission_required("aasovtool.view_sovtool", raise_exception=True)
+def api_map_live(request):
+    """Live Map: ESI hub_detail + canonical System positions only.
+
+    Overrides are *not* applied even though there's a Scenario row,
+    so the response is a faithful mirror of ESI plus the canonical
+    layout. Returns the same shape as the scenario detail endpoint
+    so the frontend can swap freely between live and user maps.
+    """
+    scenario = _ensure_live_map()
+    systems = _build_scenario_systems(scenario, apply_overrides=False)
+    return JsonResponse(
+        {
+            "name": "live",
+            "isLive": True,
+            "description": scenario.description,
+            "systems": systems,
+            "updated_at": scenario.updated_at.isoformat(),
+        }
+    )
+
+
+@login_required
+@require_http_methods(["GET", "PUT", "DELETE"])
+def api_map_detail(request, name: str):
+    if not request.user.has_perm("aasovtool.view_sovtool"):
+        return JsonResponse({"detail": "Forbidden"}, status=403)
+    if name == "live":
+        return JsonResponse(
+            {"detail": "Use /api/maps/live for the live map."}, status=400
+        )
+
+    scenario = models.Scenario.objects.filter(name=name, is_live=False).first()
+    if scenario is None:
+        return JsonResponse({"detail": "Map not found."}, status=404)
+
+    if request.method == "GET":
+        systems = _build_scenario_systems(scenario, apply_overrides=True)
+        return JsonResponse(
+            {
+                "name": scenario.name,
+                "isLive": False,
+                "description": scenario.description,
+                "creator": scenario.creator.username if scenario.creator else None,
+                "basedOn": scenario.based_on_name,
+                "createdAt": scenario.created_at.isoformat(),
+                "updatedAt": scenario.updated_at.isoformat(),
+                "systems": systems,
+                "updated_at": scenario.updated_at.isoformat(),
+            }
+        )
+
+    if request.method == "DELETE":
+        # Allow delete by creator or by anyone with manage_sovtool.
+        is_admin = request.user.has_perm("aasovtool.manage_sovtool")
+        if scenario.creator_id != request.user.id and not is_admin:
+            return JsonResponse({"detail": "Only the creator or an admin can delete."}, status=403)
+        scenario.delete()
+        return JsonResponse({"status": "deleted"})
+
+    # PUT — instant save of overrides.
+    if not request.user.has_perm("aasovtool.edit_sovtool"):
+        return JsonResponse({"detail": "Permission denied."}, status=403)
+
+    payload = _json_request(request)
+    systems_payload = payload.get("systems") or []
+    if not request.user.has_perm("aasovtool.manage_sovtool"):
+        allowed = {r.lower() for r in _editable_regions(request)}
+        for system in systems_payload:
+            if system.get("regionName", "").lower() not in allowed:
+                return JsonResponse(
+                    {
+                        "detail": (
+                            "You do not have permission to edit systems in the "
+                            f"{system.get('regionName')} region."
+                        )
+                    },
+                    status=403,
+                )
+
+    scenario.updated_at = timezone.now()
+    if "description" in payload:
+        scenario.description = payload.get("description")
+    scenario.save()
+    perms.replace_overrides(scenario, systems_payload)
+    return JsonResponse(
+        {
+            "name": scenario.name,
+            "isLive": False,
+            "updated_at": scenario.updated_at.isoformat(),
+            "systems": _build_scenario_systems(scenario),
+        }
     )
 
 
