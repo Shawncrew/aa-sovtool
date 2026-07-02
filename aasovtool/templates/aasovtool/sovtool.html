@@ -13,6 +13,7 @@
         username: "{{ request.user.username|escapejs }}",
         role: "{{ role|escapejs }}",
         editableRegions: {{ editable_regions|safe|default:"[]" }},
+        allowedRegions: {{ allowed_regions|safe|default:"[]" }},
         defaultScenario: "{{ default_scenario|escapejs }}",
         addTokenUrl: "{% url 'aasovtool:add_corp_token' %}",
     };

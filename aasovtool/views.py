@@ -508,6 +508,7 @@ def index(request):
         "page_title": "Sovereignty Planner",
         "role": _user_role(request),
         "editable_regions": _editable_regions(request),
+        "allowed_regions": list(app_settings.AASOVTOOL_ALLOWED_REGIONS),
         "default_scenario": app_settings.AASOVTOOL_DEFAULT_SCENARIO,
         "frontend_assets": _resolve_frontend_assets(),
     }
@@ -573,6 +574,7 @@ def api_me(request):
             "username": request.user.username,
             "role": _user_role(request),
             "editableRegions": _editable_regions(request),
+            "allowedRegions": list(app_settings.AASOVTOOL_ALLOWED_REGIONS),
         }
     )
 

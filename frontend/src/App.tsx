@@ -43,7 +43,21 @@ interface ChangeEntry {
   username: string;
 }
 const HISTORY_LIMIT = 100;
-const ALLOWED_REGIONS = new Set(["pure blind", "fade", "deklein"]);
+// Regions the planner is scoped to. The backend already filters served
+// systems by AASOVTOOL_ALLOWED_REGIONS; this client-side guard mirrors it
+// from the same config (injected via the bootstrap payload) so the two
+// stay in sync. The hardcoded list is only a dev-server fallback for when
+// the bootstrap is absent (e.g. `npm run dev`).
+const DEFAULT_ALLOWED_REGIONS = ["pure blind", "fade", "deklein"];
+const ALLOWED_REGIONS = new Set(
+  (
+    (
+      window as unknown as {
+        AASOVTOOL_BOOTSTRAP?: { allowedRegions?: string[] };
+      }
+    ).AASOVTOOL_BOOTSTRAP?.allowedRegions ?? DEFAULT_ALLOWED_REGIONS
+  ).map((region) => region.toLowerCase()),
+);
 const DEFAULT_SCENARIO_NAME = "default";
 const HISTORY_STORAGE_VERSION = "v2";
 
