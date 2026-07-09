@@ -100,3 +100,12 @@ export async function saveUserMap(
   );
   return response.data;
 }
+
+// Persist card positions on the Live Map (edit_sovtool only). Only the
+// canonical card layout is saved; ESI-driven fields are ignored server-side.
+export async function saveLiveMap(
+  systems: SystemNode[],
+): Promise<MapResponse> {
+  const response = await apiClient.put<MapResponse>("/maps/live", { systems });
+  return response.data;
+}

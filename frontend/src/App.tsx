@@ -23,6 +23,7 @@ import {
   fetchLiveMap,
   fetchMaps,
   fetchUserMap,
+  saveLiveMap,
   saveScenario,
   saveUserMap,
   type MapResponse,
@@ -303,6 +304,10 @@ function App() {
   const [isMapsModalOpen, setIsMapsModalOpen] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // On the Live Map we only auto-save after an actual card drag, never on
+  // the initial load / ESI refetch (which would bulk-write canonical
+  // positions just from viewing). User maps always persist their overrides.
+  const liveDirtyRef = useRef(false);
   const isLiveTab = currentMap === "live";
   const scenarioName = DEFAULT_SCENARIO_NAME;
   const canonicalScenarioName = DEFAULT_SCENARIO_NAME;
@@ -659,20 +664,27 @@ function App() {
     enabled: Boolean(authState),
   });
 
-  // Auto-save: any time `systems` changes while a user map is loaded,
-  // PUT the new payload after a short debounce. The Live Map is
-  // immutable and never auto-saves.
+  // Auto-save: any time `systems` changes, PUT the new payload after a
+  // short debounce. User maps persist the full override set; the Live
+  // Map persists only card positions (edit_sovtool can rearrange it).
   useEffect(() => {
-    if (isLiveTab) return;
     if (!canEdit) return;
     if (systems.length === 0) return;
+    // Live map: skip the save triggered by loading/refetching; only a
+    // user drag (which sets liveDirtyRef) should persist canonical layout.
+    if (isLiveTab && !liveDirtyRef.current) return;
     if (autoSaveTimer.current) {
       clearTimeout(autoSaveTimer.current);
     }
     autoSaveTimer.current = setTimeout(async () => {
       setAutoSaveStatus("saving");
       try {
-        await saveUserMap(currentMap, systems);
+        if (isLiveTab) {
+          await saveLiveMap(systems);
+          liveDirtyRef.current = false;
+        } else {
+          await saveUserMap(currentMap, systems);
+        }
         setAutoSaveStatus("saved");
         setTimeout(() => setAutoSaveStatus("idle"), 1500);
       } catch (err) {
@@ -699,6 +711,9 @@ function App() {
       const positionedSystems = ensureNodePositions(scopedSystems);
       const { normalizedSystems, removedCount } =
         clampExportTransfersInList(positionedSystems);
+      // Fresh server payload adopted — clear any pending live-drag flag so
+      // this load isn't mistaken for an unsaved edit.
+      liveDirtyRef.current = false;
       setSystems(normalizedSystems);
       setSelectedSystemName(null);
       if (removedCount > 0) {
@@ -1521,15 +1536,19 @@ function App() {
       return;
     }
     setSystems((prev) =>
-      prev.map((system) =>
-          system.systemName === systemName
-            ? system.position &&
-              system.position.x === position.x &&
-              system.position.y === position.y
-              ? system
-              : { ...system, position }
-          : system,
-      ),
+      prev.map((system) => {
+        if (system.systemName !== systemName) return system;
+        if (
+          system.position &&
+          system.position.x === position.x &&
+          system.position.y === position.y
+        ) {
+          return system;
+        }
+        // Mark the live layout dirty so the auto-save effect persists it.
+        liveDirtyRef.current = true;
+        return { ...system, position };
+      }),
     );
     },
     [canEdit],
@@ -2188,7 +2207,11 @@ function App() {
             type="button"
             className={`btn btn-sm ${isLiveTab ? "btn-light" : "btn-outline-light"}`}
             onClick={() => setCurrentMap("live")}
-            title="The live, source-of-truth map driven by ESI (read-only)."
+            title={
+              canEdit
+                ? "The live, source-of-truth map driven by ESI. Editors can drag cards to arrange the layout."
+                : "The live, source-of-truth map driven by ESI (read-only)."
+            }
           >
             Live Map
           </button>
@@ -2355,7 +2378,7 @@ function App() {
         )}
         {isLiveTab && (
           <span className="ml-2 text-[10px] uppercase tracking-wide text-[#857aa5]">
-            Read-only • Source of truth
+            {canEdit ? "Source of truth • Drag to arrange" : "Read-only • Source of truth"}
           </span>
         )}
       </div>

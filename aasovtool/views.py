@@ -761,7 +761,7 @@ def api_maps(request):
 
 
 @login_required
-@permission_required("aasovtool.view_sovtool", raise_exception=True)
+@require_http_methods(["GET", "PUT"])
 def api_map_live(request):
     """Live Map: ESI hub_detail + canonical System positions only.
 
@@ -769,8 +769,66 @@ def api_map_live(request):
     so the response is a faithful mirror of ESI plus the canonical
     layout. Returns the same shape as the scenario detail endpoint
     so the frontend can swap freely between live and user maps.
+
+    ``PUT`` lets ``edit_sovtool`` users rearrange the live cards: only
+    card *positions* are persisted (to System.canonical_x/y) — role,
+    upgrades and transfers stay ESI-driven and are ignored here.
     """
+    if not request.user.has_perm("aasovtool.view_sovtool"):
+        return JsonResponse({"detail": "Forbidden"}, status=403)
     scenario = _ensure_live_map()
+
+    if request.method == "PUT":
+        if not request.user.has_perm("aasovtool.edit_sovtool"):
+            return JsonResponse({"detail": "Permission denied."}, status=403)
+
+        payload = _json_request(request)
+        incoming: dict[str, dict] = {}
+        for system in payload.get("systems") or []:
+            name = system.get("systemName")
+            pos = system.get("position")
+            if not name or not isinstance(pos, dict):
+                continue
+            if not isinstance(pos.get("x"), (int, float)) or not isinstance(
+                pos.get("y"), (int, float)
+            ):
+                continue
+            incoming[name] = {"x": float(pos["x"]), "y": float(pos["y"])}
+
+        # Only touch systems whose card actually moved, so the per-region
+        # gate below applies to the regions the user is really editing.
+        rows = models.System.objects.filter(system_name__in=incoming.keys())
+        changed = [
+            row
+            for row in rows
+            if row.canonical_x != incoming[row.system_name]["x"]
+            or row.canonical_y != incoming[row.system_name]["y"]
+        ]
+
+        if changed and not request.user.has_perm("aasovtool.manage_sovtool"):
+            allowed = {r.lower() for r in _editable_regions(request)}
+            for row in changed:
+                if row.region_name.lower() not in allowed:
+                    return JsonResponse(
+                        {
+                            "detail": (
+                                "You do not have permission to edit systems in "
+                                f"the {row.region_name} region."
+                            )
+                        },
+                        status=403,
+                    )
+
+        for row in changed:
+            row.canonical_x = incoming[row.system_name]["x"]
+            row.canonical_y = incoming[row.system_name]["y"]
+        if changed:
+            models.System.objects.bulk_update(
+                changed, ["canonical_x", "canonical_y"]
+            )
+            scenario.updated_at = timezone.now()
+            scenario.save(update_fields=["updated_at"])
+
     systems = _build_scenario_systems(scenario, apply_overrides=False)
     return JsonResponse(
         {
