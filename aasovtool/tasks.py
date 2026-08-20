@@ -46,17 +46,17 @@ def refresh_sovereignty_structures() -> int:  # noqa: C901
     from . import app_settings as _settings
     allowed_regions = {r.lower() for r in _settings.AASOVTOOL_ALLOWED_REGIONS}
     if allowed_regions and sov_systems:
-        allowed_star_ids = set(
+        allowed_solar_system_ids = set(
             models.System.objects.filter(
                 region_name__iregex=r"^(%s)$" % "|".join(allowed_regions)
-            ).values_list("star_id", flat=True)
+            ).values_list("solar_system_id", flat=True)
         )
-        allowed_star_ids.discard(None)
-        if allowed_star_ids:
+        allowed_solar_system_ids.discard(None)
+        if allowed_solar_system_ids:
             sov_systems = [
                 row for row in sov_systems
                 if int(row.get("solar_system_id") or row.get("system_id") or 0)
-                in allowed_star_ids
+                in allowed_solar_system_ids
             ]
 
     raidable: dict[int, dict] = {}
