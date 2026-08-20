@@ -23,6 +23,14 @@ from esi.decorators import token_required
 from . import app_settings, models
 from . import permissions as perms
 
+# Custom structure markers (Keepstar / Industry Park) aren't real
+# sovereignty-hub upgrades reported by ESI — they're manual flags an
+# editor sets by hand. The Live Map is otherwise a pure mirror of ESI
+# (see api_map_live), so these two type_ids are special-cased: they're
+# the only "upgrade" data persisted via SystemOverride and merged back
+# in on read, surviving ESI refreshes untouched.
+LIVE_MAP_MANUAL_UPGRADE_TYPE_IDS = {35834, 35825}
+
 
 # --- Helpers --------------------------------------------------------------
 
@@ -770,9 +778,11 @@ def api_map_live(request):
     layout. Returns the same shape as the scenario detail endpoint
     so the frontend can swap freely between live and user maps.
 
-    ``PUT`` lets ``edit_sovtool`` users rearrange the live cards: only
-    card *positions* are persisted (to System.canonical_x/y) — role,
-    upgrades and transfers stay ESI-driven and are ignored here.
+    ``PUT`` lets ``edit_sovtool`` users rearrange the live cards: card
+    *positions* are persisted (to System.canonical_x/y), and Keepstar /
+    Industry Park markers (see ``LIVE_MAP_MANUAL_UPGRADE_TYPE_IDS``) are
+    persisted to SystemOverride so they survive ESI refreshes. All other
+    role/upgrade/transfer data stays ESI-driven and is ignored here.
     """
     if not request.user.has_perm("aasovtool.view_sovtool"):
         return JsonResponse({"detail": "Forbidden"}, status=403)
@@ -784,30 +794,71 @@ def api_map_live(request):
 
         payload = _json_request(request)
         incoming: dict[str, dict] = {}
+        incoming_markers: dict[str, list[dict]] = {}
         for system in payload.get("systems") or []:
             name = system.get("systemName")
+            if not name:
+                continue
             pos = system.get("position")
-            if not name or not isinstance(pos, dict):
-                continue
-            if not isinstance(pos.get("x"), (int, float)) or not isinstance(
-                pos.get("y"), (int, float)
+            if (
+                isinstance(pos, dict)
+                and isinstance(pos.get("x"), (int, float))
+                and isinstance(pos.get("y"), (int, float))
             ):
-                continue
-            incoming[name] = {"x": float(pos["x"]), "y": float(pos["y"])}
+                incoming[name] = {"x": float(pos["x"]), "y": float(pos["y"])}
+            markers = [
+                {
+                    "typeId": int(u["typeId"]),
+                    "upgradeName": u.get("upgradeName", ""),
+                    "isOnline": bool(u.get("isOnline", True)),
+                }
+                for u in (system.get("upgrades") or [])
+                if isinstance(u, dict)
+                and u.get("typeId") in LIVE_MAP_MANUAL_UPGRADE_TYPE_IDS
+            ]
+            incoming_markers[name] = markers
 
         # Only touch systems whose card actually moved, so the per-region
         # gate below applies to the regions the user is really editing.
-        rows = models.System.objects.filter(system_name__in=incoming.keys())
-        changed = [
+        rows = models.System.objects.filter(
+            system_name__in=set(incoming) | set(incoming_markers)
+        )
+        rows_by_name = {row.system_name: row for row in rows}
+        changed_positions = [
             row
-            for row in rows
-            if row.canonical_x != incoming[row.system_name]["x"]
-            or row.canonical_y != incoming[row.system_name]["y"]
+            for name, row in rows_by_name.items()
+            if name in incoming
+            and (
+                row.canonical_x != incoming[name]["x"]
+                or row.canonical_y != incoming[name]["y"]
+            )
         ]
 
-        if changed and not request.user.has_perm("aasovtool.manage_sovtool"):
+        existing_marker_overrides = {
+            ov.system_name: ov
+            for ov in models.SystemOverride.objects.filter(
+                scenario=scenario, system_name__in=incoming_markers.keys()
+            )
+        }
+        changed_marker_names: list[str] = []
+        for name, markers in incoming_markers.items():
+            existing = existing_marker_overrides.get(name)
+            current_markers = [
+                u
+                for u in (existing.upgrades if existing else [])
+                if u.get("typeId") in LIVE_MAP_MANUAL_UPGRADE_TYPE_IDS
+            ]
+            if current_markers != markers:
+                changed_marker_names.append(name)
+
+        touched_region_rows = {row.system_name: row for row in changed_positions}
+        for name in changed_marker_names:
+            if name in rows_by_name:
+                touched_region_rows.setdefault(name, rows_by_name[name])
+
+        if touched_region_rows and not request.user.has_perm("aasovtool.manage_sovtool"):
             allowed = {r.lower() for r in _editable_regions(request)}
-            for row in changed:
+            for row in touched_region_rows.values():
                 if row.region_name.lower() not in allowed:
                     return JsonResponse(
                         {
@@ -819,17 +870,48 @@ def api_map_live(request):
                         status=403,
                     )
 
-        for row in changed:
+        for row in changed_positions:
             row.canonical_x = incoming[row.system_name]["x"]
             row.canonical_y = incoming[row.system_name]["y"]
-        if changed:
+        if changed_positions:
             models.System.objects.bulk_update(
-                changed, ["canonical_x", "canonical_y"]
+                changed_positions, ["canonical_x", "canonical_y"]
             )
+
+        for name in changed_marker_names:
+            markers = incoming_markers[name]
+            existing = existing_marker_overrides.get(name)
+            if existing:
+                other = [
+                    u
+                    for u in (existing.upgrades or [])
+                    if u.get("typeId") not in LIVE_MAP_MANUAL_UPGRADE_TYPE_IDS
+                ]
+                existing.upgrades = other + markers
+                existing.save(update_fields=["upgrades"])
+            elif markers:
+                models.SystemOverride.objects.create(
+                    scenario=scenario, system_name=name, upgrades=markers
+                )
+
+        if changed_positions or changed_marker_names:
             scenario.updated_at = timezone.now()
             scenario.save(update_fields=["updated_at"])
 
     systems = _build_scenario_systems(scenario, apply_overrides=False)
+    marker_overrides = {
+        ov.system_name: [
+            u
+            for u in (ov.upgrades or [])
+            if u.get("typeId") in LIVE_MAP_MANUAL_UPGRADE_TYPE_IDS
+        ]
+        for ov in scenario.overrides.all()
+    }
+    for row in systems:
+        markers = marker_overrides.get(row["systemName"])
+        if markers:
+            row["upgrades"] = (row.get("upgrades") or []) + markers
+
     return JsonResponse(
         {
             "name": "live",

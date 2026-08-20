@@ -1799,6 +1799,10 @@ function App() {
       }),
     );
     if (added) {
+      // Keepstar/Industry Park markers are the one bit of "upgrade" data
+      // the Live Map actually persists (see saveLiveMap) — mark it dirty
+      // so the auto-save effect fires even on the live tab.
+      liveDirtyRef.current = true;
       setStatusMessage(`Added ${definition.upgradeName} to ${selectedSystemName}.`);
       logChange(`Added ${definition.upgradeName} to ${selectedSystemName}.`);
     }
@@ -1842,6 +1846,7 @@ function App() {
       upgradeDefinitions.find((upgrade) => upgrade.typeID === typeId)?.upgradeName ??
       "upgrade";
     if (removedName || fallbackName) {
+      liveDirtyRef.current = true;
       setStatusMessage(`Removed ${fallbackName} from ${systemName}.`);
       logChange(`Removed ${fallbackName} from ${systemName}.`);
     }
@@ -1891,6 +1896,7 @@ function App() {
     );
 
     if (currentUpgrade && nextState !== null) {
+      liveDirtyRef.current = true;
       logChange(
         `${nextState ? "Enabled" : "Disabled"} ${currentUpgrade.upgradeName} on ${systemName}.`,
       );
