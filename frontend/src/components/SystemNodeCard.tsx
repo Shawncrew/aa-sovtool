@@ -38,9 +38,14 @@ interface SystemNodeData {
   viewMode?: "compact" | "detailed";
 }
 
-type UpgradeQuadrant = "major" | "minor" | "mining" | "other";
+type UpgradeQuadrant = "major" | "minor" | "mining" | "other" | "topCenter";
 
-function getUpgradeQuadrant(upgradeName: string): UpgradeQuadrant {
+// Custom structure markers (Keepstar / Industry Park) aren't real sov-hub
+// upgrade categories — they always render top-center regardless of name.
+const TOP_CENTER_TYPE_IDS = new Set([35834, 35825]);
+
+function getUpgradeQuadrant(upgradeName: string, typeId: number): UpgradeQuadrant {
+  if (TOP_CENTER_TYPE_IDS.has(typeId)) return "topCenter";
   const lower = upgradeName.toLowerCase();
   if (lower.includes("major")) return "major";
   if (lower.includes("minor")) return "minor";
@@ -53,6 +58,7 @@ const QUADRANT_POSITION_CLASS: Record<UpgradeQuadrant, string> = {
   minor: "bottom-1.5 left-1.5",
   mining: "bottom-1.5 right-1.5",
   other: "top-1.5 right-1.5",
+  topCenter: "top-1.5 left-1/2 -translate-x-1/2",
 };
 
 function computeHandleStyle(offset: number, position: Position): CSSProperties {
@@ -270,7 +276,7 @@ function SystemNodeCardInner({ data }: NodeProps<SystemNodeData>) {
     >
       {isCompact ? (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-9 text-center">
-          <p className="text-[26px] font-semibold leading-tight text-sov-blue">
+          <p className="text-[30px] font-semibold leading-tight text-sov-blue">
             {system.systemName}
           </p>
           <p className="mt-1 text-[13px] font-mono text-slate-400">
@@ -280,7 +286,7 @@ function SystemNodeCardInner({ data }: NodeProps<SystemNodeData>) {
       ) : (
         <>
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[32px] font-semibold leading-tight text-sov-blue">
+            <p className="text-[35px] font-semibold leading-tight text-sov-blue">
               {system.systemName}
             </p>
             <span
@@ -417,16 +423,17 @@ function SystemNodeCardInner({ data }: NodeProps<SystemNodeData>) {
         )),
       )}
       {isCompact
-        ? (["major", "minor", "mining", "other"] as const).map((quadrant) => {
+        ? (["major", "minor", "mining", "other", "topCenter"] as const).map((quadrant) => {
             const icons = (system.upgrades ?? []).filter(
               (upgrade) =>
-                (upgrade.isOnline ?? true) && getUpgradeQuadrant(upgrade.upgradeName) === quadrant,
+                (upgrade.isOnline ?? true) &&
+                getUpgradeQuadrant(upgrade.upgradeName, upgrade.typeId) === quadrant,
             );
             if (icons.length === 0) return null;
             return (
               <div
                 key={quadrant}
-                className={`absolute ${QUADRANT_POSITION_CLASS[quadrant]} flex max-w-[100px] flex-wrap justify-center gap-1`}
+                className={`absolute ${QUADRANT_POSITION_CLASS[quadrant]} flex max-w-[110px] flex-wrap justify-center gap-1`}
               >
                 {icons.slice(0, 4).map((upgrade) => (
                   <span
@@ -437,7 +444,7 @@ function SystemNodeCardInner({ data }: NodeProps<SystemNodeData>) {
                       typeId={upgrade.typeId}
                       size={64}
                       alt={`${upgrade.upgradeName} icon`}
-                      className="h-11 w-11 rounded border border-slate-700 bg-slate-800/80 object-contain p-0.5"
+                      className="h-12 w-12 rounded border border-slate-700 bg-slate-800/80 object-contain p-0.5"
                     />
                   </span>
                 ))}
@@ -454,9 +461,9 @@ function SystemNodeCardInner({ data }: NodeProps<SystemNodeData>) {
                   <UpgradeIcon
                     key={`${system.systemName}-${upgrade.typeId}`}
                     typeId={upgrade.typeId}
-                    size={32}
+                    size={36}
                     alt={`${upgrade.upgradeName} icon`}
-                    className="h-8 w-8 rounded border border-slate-700 bg-slate-800 object-contain p-0.5"
+                    className="h-9 w-9 rounded border border-slate-700 bg-slate-800 object-contain p-0.5"
                   />
                 ))}
             </div>

@@ -18,6 +18,8 @@ const UPGRADE_ICON_OVERRIDES: Record<number, string> = {
   92012: "/icons/stability-exotic-v2.png",
   92013: "/icons/stability-gamma-v2.png",
   92014: "/icons/stability-plasma-v2.png",
+  35834: "/icons/keepstar.png",
+  35825: "/icons/indypark.png",
 };
 
 function buildSourceList(typeId: number, size: number): string[] {
