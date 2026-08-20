@@ -248,7 +248,7 @@
     "magmaticGasPerHour":0
   },
   {
-    "typeID":91001,
+    "typeID":87710,
     "upgradeName":"Workforce Mecha-Tooling 1",
     "power":200,
     "workforce":-5000,
@@ -256,7 +256,7 @@
     "magmaticGasPerHour":0
   },
   {
-    "typeID":91002,
+    "typeID":88228,
     "upgradeName":"Workforce Mecha-Tooling 2",
     "power":500,
     "workforce":-10000,
@@ -264,7 +264,7 @@
     "magmaticGasPerHour":0
   },
   {
-    "typeID":91003,
+    "typeID":88229,
     "upgradeName":"Workforce Mecha-Tooling 3",
     "power":800,
     "workforce":-15000,
@@ -272,7 +272,7 @@
     "magmaticGasPerHour":0
   },
   {
-    "typeID":91004,
+    "typeID":87703,
     "upgradeName":"Power Monitoring Division 1",
     "power":-200,
     "workforce":2500,
@@ -280,7 +280,7 @@
     "magmaticGasPerHour":0
   },
   {
-    "typeID":91005,
+    "typeID":88221,
     "upgradeName":"Power Monitoring Division 2",
     "power":-500,
     "workforce":10000,
@@ -288,7 +288,7 @@
     "magmaticGasPerHour":0
   },
   {
-    "typeID":91006,
+    "typeID":88227,
     "upgradeName":"Power Monitoring Division 3",
     "power":-1000,
     "workforce":25000,
@@ -296,7 +296,7 @@
     "magmaticGasPerHour":0
   },
   {
-    "typeID":92001,
+    "typeID":87948,
     "upgradeName":"Exploration Detector 1",
     "power":400,
     "workforce":4000,
@@ -304,7 +304,7 @@
     "magmaticGasPerHour":0
   },
   {
-    "typeID":92002,
+    "typeID":87953,
     "upgradeName":"Exploration Detector 2",
     "power":850,
     "workforce":8000,
@@ -312,7 +312,7 @@
     "magmaticGasPerHour":0
   },
   {
-    "typeID":92003,
+    "typeID":87954,
     "upgradeName":"Exploration Detector 3",
     "power":1300,
     "workforce":12000,
@@ -328,7 +328,7 @@
     "magmaticGasPerHour":7
   },
   {
-    "typeID":92012,
+    "typeID":87951,
     "upgradeName":"Exotic Stability Generator",
     "power":200,
     "workforce":2700,

@@ -12,15 +12,15 @@ interface UpgradeIconProps {
 // from frontend/public/icons and are collected there by collectstatic.
 const ICON_BASE = "/static/aasovtool/icons/";
 
+// Workforce Mecha-Tooling, Power Monitoring Division, Exploration Detector,
+// and Exotic Stability Generator now use their real (ESI-verified) type
+// IDs, which resolve to official EVE icons — no local override needed.
+// Electric/Gamma/Plasma Stability Generator IDs below are still the
+// unverified placeholder IDs from the original bundled catalog (no live
+// hub with those installed has been observed yet to confirm the real
+// ones), so they keep local artwork until we can confirm real IDs.
 const UPGRADE_ICON_OVERRIDES: Record<number, string> = {
-  91001: `${ICON_BASE}workforce-mecha-tooling.svg`,
-  91002: `${ICON_BASE}workforce-mecha-tooling.svg`,
-  91003: `${ICON_BASE}workforce-mecha-tooling.svg`,
-  91004: `${ICON_BASE}power-monitoring-division.svg`,
-  91005: `${ICON_BASE}power-monitoring-division.svg`,
-  91006: `${ICON_BASE}power-monitoring-division.svg`,
   92011: `${ICON_BASE}stability-electric-v2.png`,
-  92012: `${ICON_BASE}stability-exotic-v2.png`,
   92013: `${ICON_BASE}stability-gamma-v2.png`,
   92014: `${ICON_BASE}stability-plasma-v2.png`,
   35834: `${ICON_BASE}keepstar.png`,
