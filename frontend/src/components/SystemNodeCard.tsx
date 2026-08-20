@@ -35,7 +35,25 @@ interface SystemNodeData {
     superionicIce: { min: number; max: number };
     magmaticGas: { min: number; max: number };
   };
+  viewMode?: "compact" | "detailed";
 }
+
+type UpgradeQuadrant = "major" | "minor" | "mining" | "other";
+
+function getUpgradeQuadrant(upgradeName: string): UpgradeQuadrant {
+  const lower = upgradeName.toLowerCase();
+  if (lower.includes("major")) return "major";
+  if (lower.includes("minor")) return "minor";
+  if (lower.includes("prospecting array")) return "mining";
+  return "other";
+}
+
+const QUADRANT_POSITION_CLASS: Record<UpgradeQuadrant, string> = {
+  major: "top-1.5 left-1.5",
+  minor: "bottom-1.5 left-1.5",
+  mining: "bottom-1.5 right-1.5",
+  other: "top-1.5 right-1.5",
+};
 
 function computeHandleStyle(offset: number, position: Position): CSSProperties {
   const percentage = offset * 100;
@@ -127,7 +145,16 @@ function calculateGradientColor(
 
 function SystemNodeCardInner({ data }: NodeProps<SystemNodeData>) {
   const { t } = useI18n();
-  const { system, handles, isSelected, stats, systemColorMode = "none", colorModeRanges } = data;
+  const {
+    system,
+    handles,
+    isSelected,
+    stats,
+    systemColorMode = "none",
+    colorModeRanges,
+    viewMode = "compact",
+  } = data;
+  const isCompact = viewMode === "compact";
   const isNpcSystem = typeof system.factionId === "number" && system.factionId > 0;
   
   let baseAppearance: string;
@@ -241,102 +268,115 @@ function SystemNodeCardInner({ data }: NodeProps<SystemNodeData>) {
       className={`min-w-[250px] max-w-[250px] rounded-lg border px-4 py-3 text-left shadow-lg transition-all ${selectedAppearance}`}
       style={cardStyle}
     >
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[32px] font-semibold leading-tight text-sov-blue">
-          {system.systemName}
-        </p>
-        <span
-          className={[
-            "rounded px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-colors",
-            system.role === "export"
-              ? "bg-rose-900/40 text-rose-200"
-              : system.role === "import"
-              ? "bg-emerald-900/40 text-emerald-200"
-              : "bg-slate-800 text-slate-300",
-          ].join(" ")}
-        >
-          {system.role === "export" ? t.export : system.role === "import" ? t.import : t.transit}
-        </span>
-      </div>
-      <div className="mt-1 flex items-center text-sm text-slate-300">
-        <span className="truncate font-medium">{system.constellationName ?? "Unknown"}</span>
-        <div className="ml-auto flex items-center gap-2 text-[16px] text-slate-200 pl-2">
-          <span className="flex items-center" title="Superionic Ice per hour">
-            <span className="flex items-center font-semibold text-sky-100">
-              <IceIcon className="h-6 w-6" />
-              <span className="ml-[1px] min-w-[0.5rem] text-right">
-                {planetSuperionicIce.toLocaleString()}
-              </span>
-              <span className="text-[16px] font-normal text-sky-200/80">/hr</span>
-            </span>
-          </span>
-          <span className="flex items-center" title="Magmatic Gas per hour">
-            <span className="flex items-center font-semibold text-amber-200">
-              <FlameIcon className="h-6 w-6" />
-              <span className="ml-[1px] min-w-[0.5rem] text-right">
-                {planetMagmaticGas.toLocaleString()}
-              </span>
-              <span className="text-[16px] font-normal text-amber-200/80">/hr</span>
-            </span>
-          </span>
+      {isCompact ? (
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-9 text-center">
+          <p className="text-[26px] font-semibold leading-tight text-sov-blue">
+            {system.systemName}
+          </p>
+          <p className="mt-1 text-[13px] font-mono text-slate-400">
+            {system.security.toFixed(2)}
+          </p>
         </div>
-      </div>
-      {system.sovereignty &&
-        (typeof system.sovereignty.activityDefenseMultiplier === "number" ||
-          system.sovereignty.isRaidable) && (
-        <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-slate-300">
-          {typeof system.sovereignty.activityDefenseMultiplier === "number" && (
-            <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-amber-200">
-              ADM {system.sovereignty.activityDefenseMultiplier.toFixed(1)}
+      ) : (
+        <>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[32px] font-semibold leading-tight text-sov-blue">
+              {system.systemName}
+            </p>
+            <span
+              className={[
+                "rounded px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-colors",
+                system.role === "export"
+                  ? "bg-rose-900/40 text-rose-200"
+                  : system.role === "import"
+                  ? "bg-emerald-900/40 text-emerald-200"
+                  : "bg-slate-800 text-slate-300",
+              ].join(" ")}
+            >
+              {system.role === "export" ? t.export : system.role === "import" ? t.import : t.transit}
             </span>
+          </div>
+          <div className="mt-1 flex items-center text-sm text-slate-300">
+            <span className="truncate font-medium">{system.constellationName ?? "Unknown"}</span>
+            <div className="ml-auto flex items-center gap-2 text-[16px] text-slate-200 pl-2">
+              <span className="flex items-center" title="Superionic Ice per hour">
+                <span className="flex items-center font-semibold text-sky-100">
+                  <IceIcon className="h-6 w-6" />
+                  <span className="ml-[1px] min-w-[0.5rem] text-right">
+                    {planetSuperionicIce.toLocaleString()}
+                  </span>
+                  <span className="text-[16px] font-normal text-sky-200/80">/hr</span>
+                </span>
+              </span>
+              <span className="flex items-center" title="Magmatic Gas per hour">
+                <span className="flex items-center font-semibold text-amber-200">
+                  <FlameIcon className="h-6 w-6" />
+                  <span className="ml-[1px] min-w-[0.5rem] text-right">
+                    {planetMagmaticGas.toLocaleString()}
+                  </span>
+                  <span className="text-[16px] font-normal text-amber-200/80">/hr</span>
+                </span>
+              </span>
+            </div>
+          </div>
+          {system.sovereignty &&
+            (typeof system.sovereignty.activityDefenseMultiplier === "number" ||
+              system.sovereignty.isRaidable) && (
+            <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-slate-300">
+              {typeof system.sovereignty.activityDefenseMultiplier === "number" && (
+                <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-amber-200">
+                  ADM {system.sovereignty.activityDefenseMultiplier.toFixed(1)}
+                </span>
+              )}
+              {system.sovereignty.isRaidable && (
+                <span className="rounded bg-rose-900/60 px-1.5 py-0.5 font-semibold uppercase text-[10px] text-rose-200">
+                  Raidable
+                </span>
+              )}
+            </div>
           )}
-          {system.sovereignty.isRaidable && (
-            <span className="rounded bg-rose-900/60 px-1.5 py-0.5 font-semibold uppercase text-[10px] text-rose-200">
-              Raidable
-            </span>
-          )}
-        </div>
+          <div className="mt-3 space-y-2 text-[14px] text-slate-200">
+            <div>
+              <div className="flex justify-between text-[14px] uppercase tracking-wide text-slate-300 font-semibold">
+                <span>{t.power}</span>
+                <span className="font-bold text-slate-100">
+                  {powerUsed.toLocaleString()} / {powerCapacity.toLocaleString()}
+                </span>
+              </div>
+              <div className="relative mt-1 h-1.5 w-full overflow-hidden rounded bg-slate-800">
+                <div
+                  className={`absolute left-0 top-0 h-full ${
+                    powerUsed > powerCapacity ? "bg-red-500" : "bg-sov-blue"
+                  }`}
+                  style={{ width: `${Math.min(100, (powerCapacity > 0 ? (powerUsed / powerCapacity) * 100 : 0))}%` }}
+                />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-[14px] uppercase tracking-wide text-slate-300 font-semibold">
+                <span>{t.workforce}</span>
+                <span className="font-bold text-slate-100">
+                  {workforceUsed.toLocaleString()} / {workforceCapacity.toLocaleString()}
+                </span>
+              </div>
+              <div className="relative mt-1 h-1.5 w-full overflow-hidden rounded bg-slate-800">
+                <div
+                  className={`absolute left-0 top-0 h-full ${
+                    workforceUsed > workforceCapacity ? "bg-red-500" : "bg-sov-blue"
+                  }`}
+                  style={{ width: `${upgradeWorkforcePercent}%` }}
+                />
+                <div
+                  className={`absolute top-0 h-full ${
+                    workforceUsed > workforceCapacity ? "bg-red-500" : "bg-emerald-500"
+                  }`}
+                  style={{ left: `${upgradeWorkforcePercent}%`, width: `${exportWorkforcePercent}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </>
       )}
-      <div className="mt-3 space-y-2 text-[14px] text-slate-200">
-        <div>
-          <div className="flex justify-between text-[14px] uppercase tracking-wide text-slate-300 font-semibold">
-            <span>{t.power}</span>
-            <span className="font-bold text-slate-100">
-              {powerUsed.toLocaleString()} / {powerCapacity.toLocaleString()}
-            </span>
-          </div>
-          <div className="relative mt-1 h-1.5 w-full overflow-hidden rounded bg-slate-800">
-            <div
-              className={`absolute left-0 top-0 h-full ${
-                powerUsed > powerCapacity ? "bg-red-500" : "bg-sov-blue"
-              }`}
-              style={{ width: `${Math.min(100, (powerCapacity > 0 ? (powerUsed / powerCapacity) * 100 : 0))}%` }}
-            />
-          </div>
-        </div>
-        <div>
-          <div className="flex justify-between text-[14px] uppercase tracking-wide text-slate-300 font-semibold">
-            <span>{t.workforce}</span>
-            <span className="font-bold text-slate-100">
-              {workforceUsed.toLocaleString()} / {workforceCapacity.toLocaleString()}
-            </span>
-          </div>
-          <div className="relative mt-1 h-1.5 w-full overflow-hidden rounded bg-slate-800">
-            <div
-              className={`absolute left-0 top-0 h-full ${
-                workforceUsed > workforceCapacity ? "bg-red-500" : "bg-sov-blue"
-              }`}
-              style={{ width: `${upgradeWorkforcePercent}%` }}
-            />
-            <div
-              className={`absolute top-0 h-full ${
-                workforceUsed > workforceCapacity ? "bg-red-500" : "bg-emerald-500"
-              }`}
-              style={{ left: `${upgradeWorkforcePercent}%`, width: `${exportWorkforcePercent}%` }}
-            />
-          </div>
-        </div>
-      </div>
 
       {Object.entries(handles).map(([positionKey, descriptors]) =>
         descriptors.map((descriptor) => (
@@ -376,30 +416,61 @@ function SystemNodeCardInner({ data }: NodeProps<SystemNodeData>) {
           />
         )),
       )}
-      {system.upgrades && system.upgrades.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {system.upgrades
-            .filter((upgrade) => upgrade.isOnline ?? true)
-            .slice(0, 6)
-            .map((upgrade) => (
-              <UpgradeIcon
-                key={`${system.systemName}-${upgrade.typeId}`}
-                typeId={upgrade.typeId}
-                size={32}
-                alt={`${upgrade.upgradeName} icon`}
-                className="h-8 w-8 rounded border border-slate-700 bg-slate-800 object-contain p-0.5"
-              />
-            ))}
-        </div>
-      )}
-      {isNpcSystem && (
+      {isCompact
+        ? (["major", "minor", "mining", "other"] as const).map((quadrant) => {
+            const icons = (system.upgrades ?? []).filter(
+              (upgrade) =>
+                (upgrade.isOnline ?? true) && getUpgradeQuadrant(upgrade.upgradeName) === quadrant,
+            );
+            if (icons.length === 0) return null;
+            return (
+              <div
+                key={quadrant}
+                className={`absolute ${QUADRANT_POSITION_CLASS[quadrant]} flex max-w-[100px] flex-wrap justify-center gap-1`}
+              >
+                {icons.slice(0, 4).map((upgrade) => (
+                  <span
+                    key={`${system.systemName}-${upgrade.typeId}`}
+                    title={upgrade.upgradeName}
+                  >
+                    <UpgradeIcon
+                      typeId={upgrade.typeId}
+                      size={64}
+                      alt={`${upgrade.upgradeName} icon`}
+                      className="h-11 w-11 rounded border border-slate-700 bg-slate-800/80 object-contain p-0.5"
+                    />
+                  </span>
+                ))}
+              </div>
+            );
+          })
+        : system.upgrades &&
+          system.upgrades.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {system.upgrades
+                .filter((upgrade) => upgrade.isOnline ?? true)
+                .slice(0, 6)
+                .map((upgrade) => (
+                  <UpgradeIcon
+                    key={`${system.systemName}-${upgrade.typeId}`}
+                    typeId={upgrade.typeId}
+                    size={32}
+                    alt={`${upgrade.upgradeName} icon`}
+                    className="h-8 w-8 rounded border border-slate-700 bg-slate-800 object-contain p-0.5"
+                  />
+                ))}
+            </div>
+          )}
+      {!isCompact && isNpcSystem && (
         <div className="mt-3 rounded border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-center text-[11px] font-semibold uppercase tracking-wide text-amber-200">
           {t.npc}
         </div>
       )}
-      <div className="absolute bottom-2 right-4 text-[11px] font-mono text-slate-400">
-        {system.security.toFixed(2)}
-      </div>
+      {!isCompact && (
+        <div className="absolute bottom-2 right-4 text-[11px] font-mono text-slate-400">
+          {system.security.toFixed(2)}
+        </div>
+      )}
     </div>
   );
 }
@@ -427,6 +498,11 @@ export const SystemNodeCard = memo(SystemNodeCardInner, (prevProps, nextProps) =
   // Check if color mode changed
   if (prevData.systemColorMode !== nextData.systemColorMode) {
     return false; // Re-render if color mode changed
+  }
+
+  // Check if view mode (compact/detailed) changed
+  if (prevData.viewMode !== nextData.viewMode) {
+    return false; // Re-render if view mode changed
   }
   
   // Check if color mode ranges changed

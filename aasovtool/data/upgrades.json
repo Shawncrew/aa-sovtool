@@ -350,5 +350,21 @@
     "workforce":2700,
     "superionicIcePerHour":0,
     "magmaticGasPerHour":7
+  },
+  {
+    "typeID":35834,
+    "upgradeName":"Keepstar",
+    "power":0,
+    "workforce":0,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
+  },
+  {
+    "typeID":35825,
+    "upgradeName":"Industry Park",
+    "power":0,
+    "workforce":0,
+    "superionicIcePerHour":0,
+    "magmaticGasPerHour":0
   }
 ]

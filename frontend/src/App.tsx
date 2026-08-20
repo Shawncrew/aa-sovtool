@@ -297,6 +297,14 @@ function App() {
   const [changeHistory, setChangeHistory] = useState<ChangeEntry[]>([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [systemColorMode, setSystemColorMode] = useState<string>("none");
+  const [cardViewMode, setCardViewMode] = useState<"compact" | "detailed">(() => {
+    if (typeof window === "undefined") return "compact";
+    const stored = window.localStorage.getItem("aasovtool_cardViewMode");
+    return stored === "detailed" ? "detailed" : "compact";
+  });
+  useEffect(() => {
+    window.localStorage.setItem("aasovtool_cardViewMode", cardViewMode);
+  }, [cardViewMode]);
   // Map system: which map is currently loaded — 'live' (read-only,
   // source of truth) or a user-created map name. State drives both
   // the tabs and the query target.
@@ -2236,6 +2244,16 @@ function App() {
             <option value="superionicIce">Superionic Ice</option>
             <option value="magmaticGas">Magmatic Gas</option>
           </select>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-light"
+            onClick={() =>
+              setCardViewMode((prev) => (prev === "compact" ? "detailed" : "compact"))
+            }
+            title="Toggle card detail level"
+          >
+            {cardViewMode === "compact" ? "Compact Cards" : "Detailed Cards"}
+          </button>
           {!isLiveTab && (
             <span className="text-light small ms-2" title={`Auto-save: ${autoSaveStatus}`}>
               {autoSaveStatus === "saving" && "Saving…"}
@@ -2407,6 +2425,7 @@ function App() {
               isEditable={canEdit}
               systemColorMode={systemColorMode}
               colorModeRanges={colorModeRanges}
+              viewMode={cardViewMode}
             />
           )}
         </section>

@@ -60,6 +60,7 @@ interface SovereigntyGraphProps {
     superionicIce: { min: number; max: number };
     magmaticGas: { min: number; max: number };
   };
+  viewMode?: "compact" | "detailed";
 }
 
 export function SovereigntyGraph({
@@ -71,6 +72,7 @@ export function SovereigntyGraph({
   isEditable = true,
   systemColorMode = "none",
   colorModeRanges,
+  viewMode = "compact",
 }: SovereigntyGraphProps) {
   const positions = useMemo(
     () => computeResolvedPositions(systems),
@@ -157,6 +159,7 @@ export function SovereigntyGraph({
           stats,
           systemColorMode,
           colorModeRanges,
+          viewMode,
         },
         position,
         zIndex: isDeklein ? 20 : 10,
@@ -164,7 +167,16 @@ export function SovereigntyGraph({
     });
 
     return systemNodes;
-  }, [neighborMap, positions, selectedSystemName, systemStats, systems, systemColorMode, colorModeRanges]);
+  }, [
+    neighborMap,
+    positions,
+    selectedSystemName,
+    systemStats,
+    systems,
+    systemColorMode,
+    colorModeRanges,
+    viewMode,
+  ]);
 
   const edges = useMemo<Edge[]>(() => {
     function computeBoundaryPoint(
