@@ -251,6 +251,7 @@ export function SovereigntyGraph({
       });
     });
 
+    if (viewMode !== "compact") {
     systems.forEach((system) => {
       system.transfers.forEach((transfer) => {
         if (transfer.sourceSystemId !== system.systemName) {
@@ -309,6 +310,7 @@ export function SovereigntyGraph({
         }
       });
     });
+    }
 
     systems.forEach((system) => {
       const partnerName = system.ansiblexPartner;
@@ -353,7 +355,7 @@ export function SovereigntyGraph({
     });
 
     return edgesList;
-  }, [neighborMap, positions, systems, systemsByName]);
+  }, [neighborMap, positions, systems, systemsByName, viewMode]);
 
   return (
     <ReactFlow
