@@ -370,14 +370,15 @@ def refresh_corp_sov_hubs() -> int:
     """
     updated = 0
     # Track which hubs we successfully populated this run so we can clear
-    # stale hub_detail on rows that are no longer corp-owned.
+    # stale hub_detail on rows that are no longer corp-owned. Scoped per
+    # corp (not a single global set) so one corp's ESI failure can't wipe
+    # hub_detail belonging to a different, successfully-refreshed corp.
     refreshed_ids: set[int] = set()
-    corp_ids_seen: set[int] = set()
-    corp_owned_hub_ids: set[int] = set()
+    succeeded_corp_ids: set[int] = set()
+    owned_hub_ids_by_corp: dict[int, set[int]] = {}
     for record in models.CorpToken.objects.filter(is_enabled=True):
         if not record.esi_token:
             continue
-        corp_ids_seen.add(record.corporation_id)
         # Source of truth for "which sov hubs does this corp own" is the
         # Equinox listing endpoint:
         # /corporations/{id}/structures/sovereignty_hubs/
@@ -390,7 +391,11 @@ def refresh_corp_sov_hubs() -> int:
                 record.esi_token, record.corporation_id
             )
         except Exception:
-            hub_list = []
+            # Fetch failed — skip this corp entirely this run. Its cached
+            # hub_detail is left untouched (no wipe) since we never mark
+            # it as succeeded below.
+            continue
+        succeeded_corp_ids.add(record.corporation_id)
         for entry in hub_list:
             # CCP's sov-hub LIST uses 'id'; older candidate paths used
             # 'structure_id'. Accept either.
@@ -405,9 +410,12 @@ def refresh_corp_sov_hubs() -> int:
                     corporation_id=record.corporation_id
                 ).values_list("structure_id", flat=True)
             )
+        # Record ownership (possibly empty) now that the list fetch
+        # succeeded, so the per-corp prune below runs correctly even for
+        # a corp that legitimately owns zero hubs this run.
+        owned_hub_ids_by_corp[record.corporation_id] = set(owned_ids)
         if not owned_ids:
             continue
-        corp_owned_hub_ids.update(owned_ids)
         # Sync corp-owned hub rows: when refresh_sovereignty_structures
         # has run, there's already a row per system keyed on
         # solar_system_id (with a synthetic negative structure_id). We
@@ -476,16 +484,21 @@ def refresh_corp_sov_hubs() -> int:
             )
             updated += 1
     # Authoritative: any cached SovStructure that previously had
-    # hub_detail but is no longer corp-owned (by any registered token)
-    # gets its hub_detail cleared. We only do this when at least one
-    # token actually succeeded this run, so a transient ESI failure
-    # doesn't wipe live data.
-    if corp_ids_seen:
-        cleared = (
-            models.SovStructure.objects.exclude(structure_id__in=corp_owned_hub_ids)
-            .exclude(hub_detail={})
-            .update(hub_detail={})
-        )
+    # hub_detail but is no longer corp-owned gets its hub_detail cleared
+    # — but only per corp whose hub-list fetch actually succeeded this
+    # run. A corp whose ESI call failed is skipped entirely above (see
+    # the `continue` in the except block), so its hubs never appear here
+    # and its cached hub_detail survives untouched.
+    if succeeded_corp_ids:
+        cleared = 0
+        for corp_id in succeeded_corp_ids:
+            owned = owned_hub_ids_by_corp.get(corp_id, set())
+            cleared += (
+                models.SovStructure.objects.filter(corporation_id=corp_id)
+                .exclude(structure_id__in=owned)
+                .exclude(hub_detail={})
+                .update(hub_detail={})
+            )
         if cleared:
             print(f"[sovtool] Cleared stale hub_detail on {cleared} rows.")
 
